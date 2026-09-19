@@ -1,11 +1,7 @@
-/* ================================================================
-   《代号：双子》 WIG 游戏引擎 —— 扩充完整剧本版
-   六章流程 / 星云网盘 / 远程搜查 / 加密频道 / 星途地图 /
-   网吧拨号 / 暗涌论坛 / 母体档案库 / 声纹分析 / 三结局
-   ================================================================ */
+
 "use strict";
 
-/* ---------------- 全局状态 ---------------- */
+
 const S = {
   started: false,
   difficulty: "easy",
@@ -38,7 +34,7 @@ const $ = (sel) => document.querySelector(sel);
 const has = (f) => !!S.flags[f];
 const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
-/* ---------------- 音效 ---------------- */
+
 function ac() { if (!S.audioCtx) S.audioCtx = new (window.AudioContext || window.webkitAudioContext)(); return S.audioCtx; }
 function beep(freq, dur, vol = 0.08, when = 0) {
   try {
@@ -59,7 +55,7 @@ const beepGunshot = () => { beep(90, .35, .3); beep(60, .5, .25, .05); };
 function toast(title, body, kind = "", onClick = null, ms = 8000) {
   const el = document.createElement("div");
   el.className = "toast " + kind;
-  el.innerHTML = `<div class="t-title"><span>${esc(title)}</span><span>◈</span></div><div class="t-body">${body}</div><button class="t-close" aria-label="关闭通知">✕</button>`;
+  el.innerHTML = `<div class="t-title"><span>${esc(title)}</span></div><div class="t-body">${body}</div><button class="t-close" aria-label="关闭通知">✕</button>`;
   const dismiss = () => { el.classList.add("out"); setTimeout(() => el.remove(), 320); };
   el.onclick = () => { if (onClick) onClick(); dismiss(); };
   el.querySelector(".t-close").addEventListener("click", (e) => { e.stopPropagation(); dismiss(); });
@@ -69,19 +65,164 @@ function toast(title, body, kind = "", onClick = null, ms = 8000) {
   return el;
 }
 
-/* ---------------- 窗口管理 ---------------- */
+
+const HIRE_MSGS = [
+  { who: "me",   time: "09:47", text: "陈主编您好，我是新传2066届毕业生，投递了贵社实习记者岗。附上作品集《城中村拆迁手记》。" },
+  { who: "boss", time: "09:52", text: "看完了。\n你这篇写的是老城区。\n三个月蹲点，40多个采访对象，最后被压稿。\n为什么？" },
+  { who: "me",   time: "09:53", text: "因为稿子里提到了一家开发商。\n后来他们在我妈的店里查了三次消防。" },
+  { who: "boss", time: "09:55", text: "稿子还在吗？" },
+  { who: "me",   time: "09:55", text: "在。\n三个版本，原稿在境外网盘。" },
+  { who: "boss", time: "09:56", text: "明天上午九点，编辑部。\n带原稿。" },
+  { who: "me",   time: "09:56", text: "收到。" },
+  { who: "boss", time: "09:58", text: "等一下。" },
+  { who: "me",   time: "09:58", text: "您说。" },
+  { who: "boss", time: "09:58", text: "我们这行有个规矩。\n你写的东西，一旦发出去，就收不回来。\n你可能会丢工作，丢朋友，丢你能安睡的房间。\n你还来吗？" },
+  { who: "me",   time: "10:00", text: "来。\n我住的地方本来也不安静。" },
+  { who: "boss", time: "10:01", text: "记一下，明天带身份证和银行卡复印件。\n人事流程得走。" },
+  { who: "me",   time: "10:01", text: "好的陈主编。" },
+  { who: "boss", time: "10:01", text: "别叫陈主编。" },
+  { who: "me",   time: "10:01", text: "那叫什么？" },
+  { who: "boss", time: "10:01", text: "大家都叫我陈姐。\n进了这个门，就没有主编了。\n只有还没被和谐掉的同事。" },
+];
+const HIRE_CHOICES = {
+  0:  { correct: "陈主编您好，我是新传2066届毕业生，投递了贵社实习记者岗。附上作品集《城中村拆迁手记》。",
+        wrong: "你好，我投了简历，什么时候有消息？",
+        retort: "简历太多，说重点。你是谁？" },
+  2:  { correct: "因为稿子里提到了一家开发商。\n后来他们在我妈的店里查了三次消防。",
+        wrong: "有人压我的稿。",
+        retort: "谁压的？说清楚。" },
+  4:  { correct: "在。\n三个版本，原稿在境外网盘。",
+        wrong: "应该在吧。",
+        retort: "应该在？我要的是确定。" },
+  6:  { correct: "收到。",
+        wrong: "没问题！",
+        retort: "……我说的是带原稿，不是口号。" },
+  8:  { correct: "您说。",
+        wrong: "嗯？",
+        retort: "嗯什么，听好。" },
+  10: { correct: "来。\n我住的地方本来也不安静。",
+        wrong: "让我想想。",
+        retort: "你犹豫了。这行不适合犹豫的人。" },
+  12: { correct: "好的陈主编。",
+        wrong: "好的，领导。",
+        retort: "叫陈姐。这里没有领导。" },
+};
+function hcTimeFmt(t) {
+  const h = parseInt(t.slice(0, 2), 10);
+  return (h < 12 ? "上午 " : "下午 ") + t;
+}
+function scrollHire(box) { box.scrollTop = box.scrollHeight; }
+function playHireChat() {
+  const box = $("#hc-messages");
+  const action = $("#hc-action");
+  const inputBar = $("#hc-input-bar");
+  if (!box) return;
+  box.innerHTML = "";
+  action.innerHTML = "";
+  if (inputBar) inputBar.innerHTML = `<span class="hc-input-text" id="hc-input-text">...</span>`;
+
+  let i = 0, prevTime = "", finished = false;
+  function addTs(t) {
+    const d = document.createElement("div");
+    d.className = "hc-ts";
+    d.textContent = hcTimeFmt(t);
+    box.appendChild(d);
+  }
+  function addTyping() {
+    const d = document.createElement("div");
+    d.className = "hc-row boss";
+    d.dataset.typing = "1";
+    d.innerHTML = `<div class="hc-avatar hc-boss small">陈</div><div class="hc-typing"><i></i><i></i><i></i></div>`;
+    box.appendChild(d);
+    scrollHire(box);
+  }
+  function addBubble(who, text) {
+    const row = document.createElement("div");
+    row.className = "hc-row " + (who === "me" ? "me" : "boss");
+    row.innerHTML = `<div class="hc-avatar ${who === "me" ? "hc-me" : "hc-boss"} small">${who === "me" ? "沈" : "陈"}</div>
+      <div class="hc-bubble">${esc(text).replace(/\n/g, " ")}</div>`;
+    box.appendChild(row);
+    scrollHire(box);
+  }
+  function showChoices(idx) {
+    const ch = HIRE_CHOICES[idx];
+    if (!ch) return;
+    if (inputBar) inputBar.innerHTML = `<span class="hc-input-text" style="color:#8a94a6">选择你要发送的回复：</span>`;
+    action.innerHTML = `<div class="hc-choices">
+      <button class="btn hc-choice" data-choice="correct">${esc(ch.correct).replace(/\n/g, "<br>")}</button>
+      <button class="btn hc-choice" data-choice="wrong">${esc(ch.wrong)}</button>
+    </div>`;
+    action.querySelectorAll(".hc-choice").forEach(b => {
+      b.addEventListener("click", () => {
+        action.innerHTML = "";
+        if (inputBar) inputBar.innerHTML = `<span class="hc-input-text">...</span>`;
+        if (b.dataset.choice === "correct") {
+          addBubble("me", ch.correct);
+          beep(660, .06, .04);
+          i++;
+          setTimeout(next, 350);
+        } else {
+          addBubble("me", ch.wrong);
+          beepErr();
+          setTimeout(() => {
+            addTyping();
+            setTimeout(() => {
+              const t = box.querySelector('[data-typing="1"]');
+              if (t) t.remove();
+              addBubble("boss", ch.retort);
+              setTimeout(() => showChoices(idx), 500);
+            }, 700);
+          }, 650);
+        }
+      });
+    });
+    scrollHire(box);
+  }
+  function next() {
+    if (i >= HIRE_MSGS.length) {
+      if (finished) return;
+      finished = true;
+      action.innerHTML = `<button class="btn btn-primary btn-lg" data-action="hire-accept">明日赴约 · 入职</button>`;
+      beep(880, .12, .06);
+      return;
+    }
+    const m = HIRE_MSGS[i];
+    if (m.time !== prevTime) { addTs(m.time); prevTime = m.time; }
+    if (m.who === "me") {
+      if (HIRE_CHOICES[i]) { showChoices(i); return; }
+      setTimeout(() => {
+        addBubble("me", m.text);
+        i++;
+        setTimeout(next, 320);
+      }, 450);
+    } else {
+      addTyping();
+      setTimeout(() => {
+        const t = box.querySelector('[data-typing="1"]');
+        if (t) t.remove();
+        addBubble("boss", m.text);
+        i++;
+        setTimeout(next, 420);
+      }, 700 + Math.random() * 450);
+    }
+  }
+  next();
+}
+
+
 const APPS = {
-  cms:     { name: "星都观察者·新闻后台", glyph: "📰", w: 720, h: 560 },
-  mail:    { name: "邮箱客户端",          glyph: "✉️", w: 780, h: 560 },
-  browser: { name: "星搜 · 星都公共信息网", glyph: "🌐", w: 840, h: 580 },
-  cloud:   { name: "星云网盘 · 共享",     glyph: "☁️", w: 680, h: 520 },
-  remote:  { name: "远程连接 · LIN-PC",  glyph: "🖥️", w: 700, h: 540 },
-  chat:    { name: "加密频道 · 加密用户BC",     glyph: "💬", w: 560, h: 620 },
-  map:     { name: "星途地图",            glyph: "🗺️", w: 720, h: 680 },
-  id:      { name: "星都居民ID系统",      glyph: "🪪", w: 660, h: 560 },
-  voice:   { name: "语音助手 · 星灵",     glyph: "🎙️", w: 660, h: 620 },
-  log:     { name: "系统监控 · 日志",     glyph: "🛰️", w: 640, h: 460 },
+  cms:     { name: "星都观察者·新闻后台", glyph: "闻", w: 720, h: 560 },
+  mail:    { name: "邮箱客户端",          glyph: "邮", w: 780, h: 560 },
+  browser: { name: "星搜 · 星都公共信息网", glyph: "搜", w: 840, h: 580 },
+  cloud:   { name: "星云网盘 · 共享",     glyph: "盘", w: 680, h: 520 },
+  remote:  { name: "远程连接 · LIN-PC",  glyph: "远", w: 700, h: 540 },
+  chat:    { name: "加密频道 · 加密用户BC",     glyph: "密", w: 560, h: 620 },
+  map:     { name: "星途地图",            glyph: "图", w: 720, h: 680 },
+  id:      { name: "星都居民ID系统",      glyph: "证", w: 660, h: 560 },
+  voice:   { name: "语音助手 · 星灵",     glyph: "声", w: 660, h: 620 },
+  log:     { name: "系统监控 · 日志",     glyph: "监", w: 640, h: 460 },
   obj:     { name: "任务目标",            glyph: "◎",  w: 500, h: 500 },
+  doc:     { name: "城中村拆迁手记 · 试读", glyph: "文", w: 780, h: 640 },
 };
 
 function openApp(appId) {
@@ -94,6 +235,7 @@ function openApp(appId) {
     renderIcons();
   }
   if (S.windows[appId]) { focusWin(appId); return; }
+  if (appId === "mail") S.ui.mail.sel = null;
   const a = APPS[appId];
   const el = document.createElement("div");
   el.className = "window active";
@@ -187,7 +329,7 @@ function updateTaskbar() {
 }
 function refreshAll() { Object.keys(S.windows).forEach(refreshApp); renderIcons(); renderObjectives(); }
 
-/* ---------------- 桌面图标 ---------------- */
+
 const ICON_COLORS = {
   cms: "#5aa9e6", mail: "#e6b45a", browser: "#52d0a8", cloud: "#7f9ff0",
   remote: "#f08a72", chat: "#b98af0", map: "#4ae0c0", id: "#e6d05a", voice: "#56c8ea",
@@ -198,7 +340,7 @@ function iconColorStyle(id) {
   const r = parseInt(c.slice(1, 3), 16), g = parseInt(c.slice(3, 5), 16), b = parseInt(c.slice(5, 7), 16);
   return `--ic:${c};--icg:rgba(${r},${g},${b},.45)`;
 }
-/* Win11 风格白色线框 SVG 图标（24x24） */
+
 const ICON_SVG = {
   cms: `<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h13a1 1 0 0 1 1 1v13H5a1 1 0 0 1-1-1V5z"/><path d="M8 9h6M8 12h6M8 15.5h4"/></svg>`,
   mail: `<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3.5 7l8.5 6 8.5-6"/></svg>`,
@@ -222,18 +364,17 @@ function renderIcons() {
   if (!S.started) return;
   const unread = inbox.filter(m => m.unread).length;
   const icons = [
-    { id: "cms", glyph: "📰", label: "星都观察者<br>新闻后台", badge: 0 },
-    { id: "mail", glyph: "✉️", label: "邮箱客户端", badge: unread },
-    { id: "browser", glyph: "🌐", label: "星搜 · 公共信息网", badge: 0 },
-    { id: "cloud", glyph: "☁️", label: "星云网盘<br>共享文件", badge: 0 },
-    { id: "map", glyph: "🗺️", label: "星途地图", badge: 0 },
-    { id: "voice", glyph: "🎙️", label: "语音助手 · 星灵", badge: 0 },
-    { id: "id", glyph: "🪪", label: "居民ID系统", badge: 0 },
-    { id: "log", glyph: "🛰️", label: "系统监控<br>日志", badge: 0 },
+    { id: "cms", glyph: "闻", label: "星都观察者<br>新闻后台", badge: 0 },
+    { id: "mail", glyph: "邮", label: "邮箱客户端", badge: unread },
+    { id: "browser", glyph: "搜", label: "星搜 · 公共信息网", badge: 0 },
+    { id: "cloud", glyph: "盘", label: "星云网盘<br>共享文件", badge: 0 },
+    { id: "map", glyph: "图", label: "星途地图", badge: 0 },
+    { id: "voice", glyph: "声", label: "语音助手 · 星灵", badge: 0 },
+    { id: "id", glyph: "证", label: "居民ID系统", badge: 0 },
+    { id: "log", glyph: "监", label: "系统监控<br>日志", badge: 0 },
   ];
-  if (S.difficulty === "easy") icons.push({ id: "obj", glyph: "◎", label: "任务目标", badge: 0 });
-  if (has("remote_granted")) icons.splice(4, 0, { id: "remote", glyph: "🖥️", label: "远程连接 LIN-PC", badge: 0 });
-  if (has("remote_granted")) icons.splice(5, 0, { id: "chat", glyph: "💬", label: "加密频道 · 加密用户BC", badge: has("chat_unread") ? 1 : 0 });
+  if (has("remote_granted")) icons.splice(4, 0, { id: "remote", glyph: "远", label: "远程连接 LIN-PC", badge: 0 });
+  if (has("remote_granted")) icons.splice(5, 0, { id: "chat", glyph: "密", label: "加密频道 · 加密用户BC", badge: has("chat_unread") ? 1 : 0 });
   const area = $("#icon-area"); area.innerHTML = "";
   icons.forEach(ic => {
     const d = document.createElement("div");
@@ -255,7 +396,7 @@ function renderIcons() {
   });
 }
 
-/* ---------------- 时钟 ---------------- */
+
 function setClock(t) {
   if (S.clock.time !== t) showTimeBanner(t);
   S.clock.time = t;
@@ -272,20 +413,18 @@ function showTimeBanner(time, date) {
   if (!b) { b = document.createElement("div"); b.id = "time-banner"; b.className = "time-banner"; document.body.appendChild(b); }
   const d = date || S.clock.date || "";
   const t = time || S.clock.time || "";
-  b.innerHTML = `<span class="tb-date">📅 ${d}</span> &nbsp;${t}`;
+  b.innerHTML = `<span class="tb-date">${d}</span> &nbsp;${t}`;
   b.classList.remove("show"); void b.offsetWidth; b.classList.add("show");
   clearTimeout(_timeBannerT);
   _timeBannerT = setTimeout(() => b.classList.remove("show"), 5500);
 }
 
-/* ================================================================
-   邮件数据
-   ================================================================ */
+
 let inbox = [
   {
     id: "m_anon", from: "星空之下（匿名求助）", time: "09:23", unread: true,
     subject: "【求助】我的父母消失了",
-    body: `记者您好：
+    body: `沈记者您好：
 
 我叫林北辰，今年18岁。我父母10月8号说去邻市临港市，参加什么「智慧城市交流会」，说好两天就回来。可是到今天第4天了，人没回来，手机也全部关机。我打到他们公司去问，公司说他们请了年假——不可能的，我妈的年假从来都攒着不舍得用。
 
@@ -347,28 +486,25 @@ const pendingMails = {
 ——北辰`,
     actions: [{ label: " 打开远程连接", act: "open-remote" }]
   },
-  zhang_dm: {
-    id: "m_zhang_dm", from: "暗涌私信 · D_张", time: "10-13 21:02", unread: true,
-    subject: "（私信）你是那个记者吗？",
-    body: `是那个记者吧。老林提过你。
-
-那我就少废话，你就记三件事：临港，东郊，化工厂3号仓库。10月15日夜里，有一批「货」要转走。里面可能有我儿子，还有老林的媳妇。
-
-信不信随你。信的话，就别磨蹭。
-
-——D_张`,
-    actions: []
-  },
   witness: {
     id: "m_witness", from: "热心市民张阿姨", time: "10-12 11:36", unread: true,
     subject: "回复寻人栏目：我肯定看见你爸妈了！！",
     body: `记者同志！你前两天广播里说的那个失踪案例，我绝对没看错！
 
-昨天下午4点多，我在万象城的永辉超市看见林家两口子了！推着购物车，买了好多速冻饺子，看着挺正常的呀，一点不像是被绑架的样子。我还想上前打个招呼，人多，一下就没影了。
+昨天下午4点多，我在星空超市（星都万浪城店）看见林家两口子了！推着购物车，买了好多速冻饺子，看着挺正常的呀，一点不像是被绑架的样子。我还想上前打个招呼，人多，一下就没影了。
 
-我是老实人，从来不说假话。你在再广播一下，让他们家里人来万象城找找！能帮到人我心里高兴。
+我是老实人，从来不说假话。你在再广播一下，让他们家里人来万浪城找找！能帮到人我心里高兴。
 
 ——3栋 张阿姨`,
+    actions: []
+  },
+  gov_lead: {
+    id: "m_gov_lead", from: "未知发件人", time: "10-13 23:59", unread: true,
+    subject: "（无主题）",
+    body: `别问我是谁。观测站的老张让我把这扇门留给你：
+政务内网管理后台：gov.xd.net/admin
+认证已在管理员会话中预留，直接进入。文件用他墙上的数字解。
+——匿名`,
     actions: []
   },
   chen2: {
@@ -392,7 +528,7 @@ function deliverMail(key, delay = 1800) {
     const tb = $("#taskbar");
     if (tb) { tb.classList.add("tb-flash"); setTimeout(() => tb.classList.remove("tb-flash"), 3200); }
     beep(988, .3, .12);
-    toast("✉️ 新邮件 · " + m.from, esc(m.subject), "", () => {
+    toast("新邮件 · " + m.from, esc(m.subject), "", () => {
       openApp("mail");
       S.ui.mail.acct = "me"; S.ui.mail.acctSel = "me"; S.ui.mail.sel = m.id;
       refreshAll();
@@ -414,17 +550,15 @@ function mailFilter(v) {
   }
 }
 
-/* ================================================================
-   加密频道 · 聊天数据
-   ================================================================ */
+
 function chatInit() {
   if (S.ui.chat.initialized) return;
   S.ui.chat.initialized = true;
   const initial = [
     { who: "sys", text: "—— 加密频道已建立 · 端到端加密 · 10月12日 ——" },
-    { who: "them", sender: "加密用户BC", text: "记者哥/姐？在吗……能听到吗。这个频道是双向加密的，应该比邮箱安全。" },
+    { who: "them", sender: "加密用户BC", text: "沈记者？在吗……能听到吗。这个频道是双向加密的，应该比邮箱安全。" },
     { who: "me", text: "能听到。有发现随时告诉我。" },
-    { who: "them", sender: "加密用户BC", text: "嗯。对了……你要打开我爸的保险箱的话，可以问我。我、我尽量回忆。" },
+    { who: "them", sender: "加密用户BC", text: "嗯。对了……你要是想打开我爸的保险箱，密码提示是「我第一次开口说话的日子」。我问过我妈了——2049年3月12日，我第一次开口叫妈妈。" },
     { who: "them", sender: "加密用户BC", voice: "……嗯，我在。我在家，门窗都锁好了。" },
   ];
   S.ui.chat.msgs = initial.concat(S.ui.chat.msgs);
@@ -438,12 +572,10 @@ function chatSys(text) {
   if (S.windows.chat) refreshApp("chat");
 }
 
-/* ================================================================
-   语音证据（星灵）
-   ================================================================ */
+
 const evidences = [
   {
-    id: "v1", icon: "📼", name: "北辰的求助语音留言", meta: "来源：寻人栏目留言箱 · 10月12日",
+    id: "v1", icon: "", name: "北辰的求助语音留言", meta: "来源：寻人栏目留言箱 · 10月12日",
     need: () => true,
     transcript: `「……你们是寻人栏目的吧。我叫林北辰。我爸妈10月8号去的临港市，说是交流会，到现在没回来，手机全关机。
 
@@ -474,7 +606,7 @@ const evidences = [
 （画外音识别：男性，中年，缓慢而礼貌——与评估报告主笔「李某某」的声纹特征匹配度 97.2%）`
   },
   {
-    id: "v4", icon: "💬", name: "北辰 · 加密频道语音样本", meta: "来源：加密频道 · 自动采样",
+    id: "v4", icon: "声", name: "北辰 · 加密频道语音样本", meta: "来源：加密频道 · 自动采样",
     need: () => has("remote_granted"),
     transcript: `（三秒语音样本，采集自加密频道。）
 
@@ -483,7 +615,7 @@ const evidences = [
 ——声纹基线已建立：样本主体 A（林北辰）。`
   },
   {
-    id: "v5", icon: "🗂️", name: "李医生_自述（母体档案库）", meta: "来源：ID系统 · 隐藏复核窗口",
+    id: "v5", icon: "", name: "李医生_自述（母体档案库）", meta: "来源：ID系统 · 隐藏复核窗口",
     need: () => has("truth_known"),
     transcript: `「……我受够了。他们强迫我在评估报告上做手脚，让那些『多余』的孩子看起来有心理问题……我做过最坏的一件事，就是把一个本来很健康的小男孩标记成『反社会』，因为他父母不肯给贿赂金……那个男孩好像姓林……我……我每天晚上都做噩梦……」
 
@@ -495,6 +627,7 @@ const evidences = [
 const VOICE_AUDIO = { v1: "assets/voice_v1.wav", v2: "assets/voice_v2.wav", v3: "assets/voice_v3.wav", v4: "assets/voice_v4.wav", v5: "assets/voice_v5.wav" };
 function stopVoiceAudio() {
   if (S._voiceAudio) { try { S._voiceAudio.pause(); S._voiceAudio = null; } catch (e) {} }
+  if (S._voiceScrollT) { clearInterval(S._voiceScrollT); S._voiceScrollT = null; }
 }
 function playVoiceAudio(src) {
   try {
@@ -502,9 +635,14 @@ function playVoiceAudio(src) {
     S._voiceAudio = a;
     a.onended = () => {
       if (S._voiceAudio === a) S._voiceAudio = null;
+      if (S._voiceScrollT) { clearInterval(S._voiceScrollT); S._voiceScrollT = null; }
       if (S.windows.voice && S.ui.voice.sel) { S.ui.voice.sel = null; refreshApp("voice"); }
     };
     a.play().catch(() => {});
+    S._voiceScrollT = setInterval(() => {
+      const tr = document.getElementById("voice-transcript");
+      if (tr && tr.scrollHeight > tr.clientHeight) tr.scrollTop += 2;
+    }, 350);
   } catch (e) {}
 }
 function playEvidence(ev) {
@@ -523,9 +661,7 @@ const VP_RULES = [
   { a: "v5", b: "*", r: "diff", text: "<span class='diff'>声纹不一致。</span>两段音频来自不同的人。" },
 ];
 
-/* ================================================================
-   星搜 · 搜索数据库
-   ================================================================ */
+
 const SEARCH_DB = [
   {
     keys: ["生命延续中心"],
@@ -591,11 +727,11 @@ const SEARCH_DB = [
     ]
   },
   {
-    keys: ["万象城", "商场", "超市"],
+    keys: ["万浪城", "商场", "超市"],
     onSearch: () => {},
     results: () => [
-      { url: "map.xd.net/place/wanxiang", title: "万象城 · 星都店 —— 星途地图", page: "mall" },
-      { url: "dianping.xd.net", title: "万象城商圈美食排行榜（已归档）", page: "mall", flag: "信息可能过期" },
+      { url: "map.xd.net/place/wanlang", title: "万浪城 · 星都店 —— 星途地图", page: "mall" },
+      { url: "dianping.xd.net", title: "万浪城商圈美食排行榜（已归档）", page: "mall", flag: "信息可能过期" },
     ]
   },
   {
@@ -735,7 +871,7 @@ const SEARCH_DB = [
   },
 ];
 
-/* 搜索历史：最近搜索记录（去重、最新在前、最多保留8条） */
+
 function recordSearch(q) {
   const h = S.searchHistory = S.searchHistory || [];
   const i = h.indexOf(q);
@@ -783,9 +919,7 @@ function doSearch(q) {
   }, 600 + Math.random() * 500);
 }
 
-/* ================================================================
-   网页内容
-   ================================================================ */
+
 function browserChrome(inner) {
   const url = S.ui.browser.pageUrl || "sos.xd.net/home";
   const isHome = S.ui.browser.page === "home";
@@ -797,7 +931,7 @@ function browserChrome(inner) {
         <button data-action="go-home" title="主页">⌂</button>
       </div>
       <div class="browser-addr">
-        <span class="lock">🔒</span>
+        <span class="lock" style="font-style:normal;font-size:10px">SSL</span>
         <span class="url">${esc(url)}</span>
         <span class="sep">|</span>
         <span style="color:#9aa0a6;font-size:10px">星都公共信息网 · 已通过舆情安全过滤</span>
@@ -806,7 +940,7 @@ function browserChrome(inner) {
     <div class="browser-page">${inner}</div>`;
 }
 
-/* —— 热搜数据 —— */
+
 const HOT_SEARCHES = [
   { text: "星都市成人礼测试本周开启", tag: "boil" },
   { text: "生命延续中心公布年度报告", tag: "hot" },
@@ -832,7 +966,7 @@ function hotSearchHtml() {
   </div>`;
 }
 
-/* —— 相关搜索 —— */
+
 function relatedSearchesHtml(query) {
   const base = (query || "").replace(/[「」""']/g, "").trim();
   const related = [
@@ -851,7 +985,7 @@ function relatedSearchesHtml(query) {
   </div>`;
 }
 
-/* —— 分页 —— */
+
 function paginationHtml() {
   return `<div class="se-pagination">
     <span class="se-page active">1</span>
@@ -864,18 +998,16 @@ function paginationHtml() {
   </div>`;
 }
 
-/* —— 结果条目favicon —— */
+
 function faviconFor(url) {
   if (!url) return "星";
   const domain = url.replace(/^https?:\/\//, "").split("/")[0];
   return domain.charAt(0).toUpperCase();
 }
 
-/* ================================================================
-   现代网站UI辅助函数（ms = modern site）
-   ================================================================ */
 
-/* 顶部导航栏 */
+
+
 function msNav(opts) {
   const { brand, sub, logoText, logoColor, links = [], active = "", showSearch = true, navAction = "go-home" } = opts;
   const linksHtml = links.map(l => {
@@ -901,7 +1033,7 @@ function msNav(opts) {
   </div>`;
 }
 
-/* Hero横幅 */
+
 function msHero(opts) {
   const { color = "blue", tag, title, desc, actions = [] } = opts;
   const actionsHtml = actions.map(a =>
@@ -917,28 +1049,28 @@ function msHero(opts) {
   </div>`;
 }
 
-/* 数据统计卡片 */
+
 function msStats(stats) {
   return `<div class="ms-stats">${stats.map(s => `
     <div class="ms-stat ${s.trend || ""}">
-      <div class="ms-stat-icon">${s.icon || "📊"}</div>
+      <div class="ms-stat-icon">${s.icon || ""}</div>
       <div class="ms-stat-num">${s.num}<span class="unit">${s.unit || ""}</span></div>
       <div class="ms-stat-label">${s.label}</div>
     </div>`).join("")}</div>`;
 }
 
-/* 功能卡片网格 */
+
 function msCards(cards) {
   return `<div class="ms-cards">${cards.map(c => `
     <div class="ms-card" data-action="${c.act || "go-home"}" ${c.arg ? `data-arg="${c.arg}"` : ""}>
-      <div class="ms-card-icon ${c.iconColor || "blue"}">${c.icon || "📄"}</div>
+      <div class="ms-card-icon ${c.iconColor || "blue"}">${c.icon || "文"}</div>
       <div class="ms-card-title">${c.title}</div>
       <div class="ms-card-desc">${c.desc || ""}</div>
       <div class="ms-card-arrow">了解更多 →</div>
     </div>`).join("")}</div>`;
 }
 
-/* 区块标题 */
+
 function msSection(title, sub, content) {
   return `<div class="ms-section">
     <div class="ms-section-title">${title}</div>
@@ -947,7 +1079,7 @@ function msSection(title, sub, content) {
   </div>`;
 }
 
-/* 信息提示条 */
+
 function msAlert(type, icon, text) {
   return `<div class="ms-alert ${type}">
     <div class="ms-alert-icon">${icon}</div>
@@ -955,7 +1087,7 @@ function msAlert(type, icon, text) {
   </div>`;
 }
 
-/* 进度条 */
+
 function msProgress(label, value, color = "blue") {
   return `<div class="ms-progress">
     <div class="ms-progress-label"><span class="name">${label}</span><span class="val">${value}%</span></div>
@@ -963,7 +1095,7 @@ function msProgress(label, value, color = "blue") {
   </div>`;
 }
 
-/* 页脚 */
+
 function msFooter(opts) {
   const { brand, cols = [], copyright } = opts;
   const colsHtml = cols.map(c => `
@@ -982,7 +1114,7 @@ function msFooter(opts) {
   </div>`;
 }
 
-/* —— 星都观察者（独立调查媒体）顶栏 / 页脚 —— */
+
 function obsNav(active = "深度调查") {
   const links = [
     { t: "首页", p: "daily" },
@@ -998,7 +1130,7 @@ function obsNav(active = "深度调查") {
   return `<div class="obs-nav">
     <div class="obs-nav-inner">
       <div class="obs-brand">
-        <div class="obs-logo">👁</div>
+        <div class="obs-logo" style="font-size:22px">观</div>
         <div>
           <div class="obs-brand-name">星都观察者</div>
           <div class="obs-brand-sub">XINGDU OBSERVER · 独立调查媒体</div>
@@ -1014,7 +1146,7 @@ function obsFooter(copyrightLine) {
   return `<div class="obs-footer">
     <div class="obs-footer-inner">
       <div>
-        <div class="obs-footer-brand">👁 星都观察者</div>
+        <div class="obs-footer-brand">星都观察者</div>
         <div class="obs-footer-note">独立 · 核实 · 不删稿。本站为民间信息互助通道，内容未经官方审核。</div>
       </div>
       <div class="obs-footer-cols">
@@ -1026,7 +1158,7 @@ function obsFooter(copyrightLine) {
   </div>`;
 }
 
-/* 卫生局 / 生命延续中心 顶栏导航（世界观子页） */
+
 const GOV_LINKS = [
   { t: "首页", act: "gov-sub", arg: "home" },
   { t: "政务公开", act: "gov-sub", arg: "open" },
@@ -1048,7 +1180,7 @@ const CENTER_SUB_TITLE = { home: "首页", intro: "中心简介", service: "业�
 
 function govFrame(activeKey, bodyHtml) {
   return browserChrome(`
-    ${msNav({ brand: "星都市卫生局", sub: "XINGDU MUNICIPAL HEALTH BUREAU", logoText: "⚕", logoColor: "#188038", links: GOV_LINKS, active: GOV_SUB_TITLE[activeKey] || "成人礼测试" })}
+    ${msNav({ brand: "星都市卫生局", sub: "XINGDU MUNICIPAL HEALTH BUREAU", logoText: "卫", logoColor: "#188038", links: GOV_LINKS, active: GOV_SUB_TITLE[activeKey] || "成人礼测试" })}
     <div style="padding:28px 36px;background:#fff;max-width:900px;margin:0 auto">${bodyHtml}</div>
     ${msFooter({ brand: "星都市卫生局", cols: [{ title: "政务服务", links: ["办事指南", "在线申报", "结果查询", "表格下载"] }, { title: "信息公开", links: ["机构职能", "政策文件", "统计数据", "财政信息"] }, { title: "互动交流", links: ["局长信箱", "在线咨询", "投诉举报", "意见征集"] }], copyright: "星都市卫生局 版权所有 · 本页面内容已经三轮舆情安全审核" })}
   `);
@@ -1073,11 +1205,11 @@ function govSubPage(sub) {
   if (sub === "health") return govFrame("health", `
     <div class="ms-section-title">公共卫生</div>
     <p style="font-size:14px;color:#3c4043;line-height:2;margin:12px 0">全市居民免费建立电子健康档案，18岁前完成全程疫苗接种与年度体检。新生婴儿出生即进行基因建档，数据与成人礼测试系统联网。</p>
-    ${msAlert("success", "✅", "本年度适龄青少年基因建档率 100%，健康档案完整率 99.3%。")}`);
+    ${msAlert("success", "", "本年度适龄青少年基因建档率 100%，健康档案完整率 99.3%。")}`);
   if (sub === "talk") return govFrame("talk", `
     <div class="ms-section-title">互动交流 · 局长信箱</div>
     <p style="font-size:13px;color:#5f6368;line-height:1.9;margin:12px 0">您的来信将在 15 个工作日内回复。所有公开发布的回复已经三轮舆情安全审核。涉及测试分数、安置名单的问题恕不答复。</p>
-    <div style="padding:16px;background:#f8f9fa;border-radius:8px;font-size:13px;color:#9aa0a6">📮 局长信箱：juzhang@health.xd.gov　（当前在线咨询排队：2,847 人）</div>`);
+    <div style="padding:16px;background:#f8f9fa;border-radius:8px;font-size:13px;color:#9aa0a6">局长信箱：juzhang@health.xd.gov　（当前在线咨询排队：2,847 人）</div>`);
   return govFrame("crlcs", `
     <div class="ms-section-title">成人礼测试 · 您需要了解的一切</div>
     <p style="font-size:14px;color:#3c4043;line-height:2;margin:12px 0">综合考量智力水平、创造力、心理稳定性等维度，科学发现每个孩子的天赋方向。通过测试的优选体将被正式授予公民资格；未通过者由政府统一安排「海外深造」，费用全免。</p>
@@ -1090,14 +1222,14 @@ function govSubPage(sub) {
       </div>
       <div style="flex:1;min-width:300px">
         <h4 style="font-size:15px;margin-bottom:10px;color:#202124">温馨提示</h4>
-        ${msAlert("info", "ℹ️", "测试的具体分数、评分细则及各维度权重属于工作秘密，家长无需了解。")}
-        ${msAlert("success", "✅", "请各位家长放心：政府的每一项安排，都是为了孩子好。")}
+        ${msAlert("info", "", "测试的具体分数、评分细则及各维度权重属于工作秘密，家长无需了解。")}
+        ${msAlert("success", "", "请各位家长放心：政府的每一项安排，都是为了孩子好。")}
       </div>
     </div>`);
 }
 function centerFrame(activeKey, bodyHtml) {
   return browserChrome(`
-    ${msNav({ brand: "生命延续中心", sub: "CENTER FOR LIFE CONTINUITY", logoText: "🧬", logoColor: "#1a73e8", links: CENTER_LINKS, active: CENTER_SUB_TITLE[activeKey] || "首页" })}
+    ${msNav({ brand: "生命延续中心", sub: "CENTER FOR LIFE CONTINUITY", logoText: "生", logoColor: "#1a73e8", links: CENTER_LINKS, active: CENTER_SUB_TITLE[activeKey] || "首页" })}
     <div style="padding:28px 36px;background:#fff;max-width:900px;margin:0 auto">${bodyHtml}</div>
     ${msFooter({ brand: "生命延续中心", cols: [{ title: "业务", links: ["评估服务", "档案调阅", "双子计划", "新闻动态"] }, { title: "支持", links: ["家属服务", "常见问题", "联系我们"] }], copyright: "生命延续中心 版权所有 · 本中心为国家级生命科学研究机构" })}
   `);
@@ -1111,14 +1243,14 @@ function centerSubPage(sub) {
     <div style="font-size:14px;color:#3c4043;line-height:2;margin-top:10px">① 18岁统一评估 → ② 出具《评估报告》 → ③ 通过者进入优选通道 → ④ 未通过者由中心统一安排「海外深造」送行。全程家属无需介入，费用全免。</div>`);
   if (sub === "twin") return centerFrame("twin", `
     <div class="ms-section-title">双子计划</div>
-    ${msAlert("info", "🔒", "「双子计划」为中心重点项目，相关资料依《中心保密规定》不在本网站公开。如需调阅，请凭员工二级以上权限登录内部系统。")}`);
+    ${msAlert("info", "", "「双子计划」为中心重点项目，相关资料依《中心保密规定》不在本网站公开。如需调阅，请凭员工二级以上权限登录内部系统。")}`);
   if (sub === "abroad") return centerFrame("abroad", `
     <div class="ms-section-title">海外深造项目</div>
     <p style="font-size:14px;color:#3c4043;line-height:2;margin:12px 0">未通过成人礼测试的青少年，由中心统一赴海外深造。截至本年度，送行服务满意度连续五年保持 100%。家长无需办理签证与探望，孩子的一切由中心安排妥当。</p>`);
   if (sub === "contact") return centerFrame("contact", `
     <div class="ms-section-title">联系我们</div>
     <p style="font-size:14px;color:#3c4043;line-height:2;margin:12px 0">地址：星都市高新区生命科学园区 1 号院　总机：0-800-XXX-XXXX　家属服务专线：工作日 9:00–17:00</p>
-    ${msAlert("info", "ℹ️", "「海外深造」送行期间，家属无法与当事人直接联系，这是项目的标准安排，请您放心。")}`);
+    ${msAlert("info", "", "「海外深造」送行期间，家属无法与当事人直接联系，这是项目的标准安排，请您放心。")}`);
   return centerFrame("home", "");
 }
 
@@ -1133,8 +1265,8 @@ const PAGES = {
         <span class="sb-icon">🔍</span>
         <input id="search-input" placeholder="搜索星都的一切…" autocomplete="off">
         <div class="sb-tools">
-          <span title="语音搜索">🎤</span>
-          <span title="拍照搜索">📷</span>
+          <span title="语音搜索">声</span>
+          <span title="拍照搜索">图</span>
         </div>
         <div class="sb-divider"></div>
         <button class="sb-btn" data-action="do-search">搜索</button>
@@ -1156,17 +1288,17 @@ const PAGES = {
       <div class="se-searchbox">
         <span class="sb-icon">🔍</span>
         <input id="search-input" value="${esc(q)}" placeholder="搜索星都的一切…">
-        <div class="sb-tools"><span title="语音搜索">🎤</span><span title="拍照搜索">📷</span></div>
+        <div class="sb-tools"><span title="语音搜索">声</span><span title="拍照搜索">图</span></div>
         <div class="sb-divider"></div>
         <button class="sb-btn" data-action="do-search">搜索</button>
       </div>
     </div>
     <div class="se-tabs">
-      <span class="se-tab active">🔍 网页</span>
-      <span class="se-tab">📰 资讯</span>
+      <span class="se-tab active">网页</span>
+      <span class="se-tab">资讯</span>
       <span class="se-tab">🎬 视频</span>
       <span class="se-tab">🖼️ 图片</span>
-      <span class="se-tab">💬 知道</span>
+      <span class="se-tab">知道</span>
       <span class="se-tab">📚 文库</span>
       <span class="se-tab">📍 地图</span>
     </div>`;
@@ -1240,7 +1372,7 @@ const PAGES = {
       { icon: "✈️", num: "1.7", unit: "万", label: "海外深造安排人数" }
     ])}
     ${msSection("本局核心业务", "点击进入对应板块", msCards([
-      { icon: "🧬", iconColor: "green", title: "新生儿基因建档", desc: "强制免费，出生即建档，全程可追溯。", act: "gov-sub", arg: "health" },
+      { icon: "生", iconColor: "green", title: "新生儿基因建档", desc: "强制免费，出生即建档，全程可追溯。", act: "gov-sub", arg: "health" },
       { icon: "📋", iconColor: "blue", title: "成人礼测试组织", desc: "18周岁统一测试，科学评估天赋方向。", act: "gov-sub", arg: "crlcs" },
       { icon: "🌍", iconColor: "teal", title: "海外深造项目", desc: "未通过测试的青少年由政府统一安排。", act: "gov-sub", arg: "law" },
       { icon: "🏥", iconColor: "orange", title: "公共卫生服务", desc: "免费体检、疫苗接种、健康档案。", act: "gov-sub", arg: "health" }
@@ -1275,7 +1407,7 @@ const PAGES = {
       ]
     })}
     ${msStats([
-      { icon: "🧬", num: "2048", label: "中心成立年份" },
+      { icon: "生", num: "2048", label: "中心成立年份" },
       { icon: "👶", num: "340", unit: "万+", label: "累计基因建档数", trend: "trend-up" },
       { icon: "🔬", num: "128", unit: "项", label: "在研科研项目" },
       { icon: "⭐", num: "100", unit: "%", label: "家长满意度" }
@@ -1295,7 +1427,7 @@ const PAGES = {
         </div>
         <div style="display:flex;align-items:center;font-size:28px;color:#1a73e8;font-weight:800">⇄</div>
         <div style="flex:1;min-width:280px;background:#e8f0fe;border-radius:12px;padding:24px;border:1px solid #c6dbfc">
-          <div style="font-size:36px;margin-bottom:12px">🧬</div>
+          <div style="font-size:30px;margin-bottom:12px;font-weight:700">生</div>
           <h4 style="font-size:16px;margin-bottom:8px;color:#1a73e8">备份体</h4>
           <p style="font-size:13px;color:#5f6368;line-height:1.8">原体的基因复制体，在中心托管培育。他们是彼此的「双子」，是文明的两份希望。</p>
         </div>
@@ -1392,14 +1524,14 @@ const PAGES = {
       <div class="fb-topnav">
         <div class="fb-brand">星都社交</div>
         <div class="fb-searchbar">🔍 搜索星都社交</div>
-        <div class="fb-navicons"><span title="首页">⌂</span><span title="视频">📺</span><span title="群组">👥</span><span title="好友">💬</span><span title="通知">🔔</span></div>
+        <div class="fb-navicons"><span title="首页">首</span><span title="视频">视</span><span title="群组">群</span><span title="消息">信</span><span title="通知">铃</span></div>
       </div>
       <div class="fb-body">
         <div class="fb-left">
           <div class="fb-card fb-left-user"><img class="fb-mini-ava" src="assets/avatar_bc.png" alt="北辰"><b>北辰_星辰</b></div>
           <div class="fb-card">
             <div class="fb-link">👥 好友</div>
-            <div class="fb-link">📷 照片</div>
+            <div class="fb-link">图 照片</div>
             <div class="fb-link">📋 简介</div>
             <div class="fb-link">⭐ 收藏</div>
           </div>
@@ -1428,7 +1560,7 @@ const PAGES = {
               <div class="fb-post-meta"><div class="fb-post-author">北辰_星辰</div><div class="fb-post-time">2066-10-15 · 每年固定动态</div></div>
             </div>
             <div class="fb-post-body">祝我自己18岁生日快乐🎂</div>
-            <div class="fb-post-actions"><span data-action="fb-interact">👍 128</span><span data-action="fb-interact">💬 46</span><span data-action="fb-interact">↗️ 分享</span></div>
+            <div class="fb-post-actions"><span data-action="fb-interact">赞 128</span><span data-action="fb-interact">评 46</span><span data-action="fb-interact">享 分享</span></div>
           </div>
           <div class="fb-post">
             <div class="fb-post-head">
@@ -1436,7 +1568,7 @@ const PAGES = {
               <div class="fb-post-meta"><div class="fb-post-author">北辰_星辰</div><div class="fb-post-time">2066-10-12 01:33</div></div>
             </div>
             <div class="fb-post-body">睡不着。楼下的便利店店员说，有个穿黑西装的男人在打听我爸妈。</div>
-            <div class="fb-post-actions"><span data-action="fb-interact">👍 156</span><span data-action="fb-interact">💬 52</span><span data-action="fb-interact">↗️ 分享</span></div>
+            <div class="fb-post-actions"><span data-action="fb-interact">赞 156</span><span data-action="fb-interact">评 52</span><span data-action="fb-interact">享 分享</span></div>
           </div>
           <div class="fb-post">
             <div class="fb-post-head">
@@ -1444,7 +1576,7 @@ const PAGES = {
               <div class="fb-post-meta"><div class="fb-post-author">北辰_星辰</div><div class="fb-post-time">2066-10-11 22:47</div></div>
             </div>
             <div class="fb-post-body">爸妈手机全关机第四天。公司说他们请了年假，可我妈最讨厌请假了。</div>
-            <div class="fb-post-actions"><span data-action="fb-interact">👍 83</span><span data-action="fb-interact">💬 31</span><span data-action="fb-interact">↗️ 分享</span></div>
+            <div class="fb-post-actions"><span data-action="fb-interact">赞 83</span><span data-action="fb-interact">评 31</span><span data-action="fb-interact">享 分享</span></div>
           </div>
           <div class="fb-post">
             <div class="fb-post-head">
@@ -1452,7 +1584,7 @@ const PAGES = {
               <div class="fb-post-meta"><div class="fb-post-author">北辰_星辰</div><div class="fb-post-time">2066-10-08 07:02</div></div>
             </div>
             <div class="fb-post-body">早上送爸妈出门，去临港的高铁票，说好两天就回。可我心里总觉得不踏实。</div>
-            <div class="fb-post-actions"><span data-action="fb-interact">👍 45</span><span data-action="fb-interact">💬 12</span><span data-action="fb-interact">↗️ 分享</span></div>
+            <div class="fb-post-actions"><span data-action="fb-interact">赞 45</span><span data-action="fb-interact">评 12</span><span data-action="fb-interact">享 分享</span></div>
           </div>
           <div class="fb-post">
             <div class="fb-post-head">
@@ -1460,7 +1592,7 @@ const PAGES = {
               <div class="fb-post-meta"><div class="fb-post-author">北辰_星辰</div><div class="fb-post-time">2066-10-05 20:14</div></div>
             </div>
             <div class="fb-post-body">老爸最近总在饭桌上嘀咕「为了北辰，我什么都愿意」。这话听着，总觉得哪里怪怪的。</div>
-            <div class="fb-post-actions"><span data-action="fb-interact">👍 67</span><span data-action="fb-interact">💬 19</span><span data-action="fb-interact">↗️ 分享</span></div>
+            <div class="fb-post-actions"><span data-action="fb-interact">赞 67</span><span data-action="fb-interact">评 19</span><span data-action="fb-interact">享 分享</span></div>
           </div>
           <div class="fb-post">
             <div class="fb-post-head">
@@ -1469,7 +1601,7 @@ const PAGES = {
             </div>
             <div class="fb-post-body">天文社招新海报贴了一整面墙。我还是最喜欢旧收音机里的静电声，像星星在说话。</div>
             <div class="fb-post-img"><img src="assets/post_stars.jpg" alt="窗台上的旧收音机与星空" referrerpolicy="no-referrer"></div>
-            <div class="fb-post-actions"><span data-action="fb-interact">👍 204</span><span data-action="fb-interact">💬 38</span><span data-action="fb-interact">↗️ 分享</span></div>
+            <div class="fb-post-actions"><span data-action="fb-interact">赞 204</span><span data-action="fb-interact">评 38</span><span data-action="fb-interact">享 分享</span></div>
           </div>
           <div class="fb-post">
             <div class="fb-post-head">
@@ -1477,7 +1609,7 @@ const PAGES = {
               <div class="fb-post-meta"><div class="fb-post-author">北辰_星辰</div><div class="fb-post-time">2066-09-01 08:30</div></div>
             </div>
             <div class="fb-post-body">高三开学。班主任说我们这届刚好赶上「成人礼测试」，让大家加油。</div>
-            <div class="fb-post-actions"><span data-action="fb-interact">👍 112</span><span data-action="fb-interact">💬 24</span><span data-action="fb-interact">↗️ 分享</span></div>
+            <div class="fb-post-actions"><span data-action="fb-interact">赞 112</span><span data-action="fb-interact">评 24</span><span data-action="fb-interact">享 分享</span></div>
           </div>
         </div>
       </div>
@@ -1547,7 +1679,7 @@ const PAGES = {
         <span>👁️ 星都观察者 · 调查部</span>
         <span>📅 2066年10月10日</span>
         <span>👁️ 阅读 47,210</span>
-        <span>💬 评论 1,204</span>
+        <span>评论 1,204</span>
       </div>
       <div style="font-size:15px;line-height:2.2;color:#3c4043">
         <p style="margin-bottom:16px;text-indent:2em">本报临港讯 10月9日上午，星都—临港智慧城市交流会在临港国际会展中心开幕。官方通稿称「两市领导出席并致辞」，但记者辗转查询，<b>与会代表名单已经市委宣传部门审核备案，内容不予公开</b>。</p>
@@ -1690,8 +1822,8 @@ const PAGES = {
           <div style="font-size:12px;color:#9aa0a6">📍 临港市东郊工业区 · 距临港市区14公里</div>
         </div>
         <div style="display:flex;gap:8px">
-          <button class="ms-nav-btn">🗺️ 街景</button>
-          <button class="ms-nav-btn primary">🧭 导航</button>
+          <button class="ms-nav-btn">图 街景</button>
+          <button class="ms-nav-btn primary">向 导航</button>
         </div>
       </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px">
@@ -1714,7 +1846,7 @@ const PAGES = {
       </div>
       <h3 style="font-size:16px;font-weight:700;color:#202124;margin-bottom:10px">地点详情</h3>
       <p style="font-size:13.5px;line-height:2;color:#3c4043;margin-bottom:12px">厂区2014年关停。3号仓库为厂区最大库房，紧邻货运铁路支线。</p>
-      ${msAlert("warning", "📡", "卫星图像显示：2066年9月起，仓库外围出现新架设的监控探头与夜间照明。")}
+      ${msAlert("warning", "", "卫星图像显示：2066年9月起，仓库外围出现新架设的监控探头与夜间照明。")}
     </div>
   `),
   rumor_destroy: () => browserChrome(`
@@ -1784,7 +1916,7 @@ const PAGES = {
         <span>👁️ 星都观察者 · 数据组</span>
         <span>📅 2066年10月11日</span>
         <span>👁️ 阅读 52,093</span>
-        <span>💬 评论 2,871</span>
+        <span>评论 2,871</span>
       </div>
       <div style="font-size:15px;line-height:2.2;color:#3c4043">
         <p style="margin-bottom:16px;text-indent:2em">市政务服务管理局今天公布：全市信用积分体系覆盖率已达 <b>98.2%</b>，全市平均积分 720 分，「优质公民」占比 34.6%。官方口径一片大好。但我们拿到的另一份内部表格显示——有 <b>2.1%</b> 的人被划入「需关注」，而他们之中，超过七成是还没满18岁的孩子。</p>
@@ -1823,7 +1955,7 @@ const PAGES = {
           <div style="display:flex;gap:16px;margin-bottom:12px;font-size:12px">
             <span style="color:#5f6368">📊 评分 <b style="color:#e8710a">9.4</b></span>
             <span style="color:#5f6368">👁️ 阅读 128,491</span>
-            <span style="color:#5f6368">💬 书评 3,847</span>
+            <span style="color:#5f6368">书评 3,847</span>
           </div>
           <p style="font-size:13px;color:#5f6368;line-height:1.8;margin-bottom:16px">在一个每个人都有备份体的世界里，当备份体读完第一千本禁书之后，他还是备份吗？一面被锁在储藏室里的镜子，会记得什么？</p>
           <div style="display:flex;gap:8px">
@@ -1881,8 +2013,8 @@ const PAGES = {
         <p style="font-size:13px;color:#3c4043;line-height:1.8;margin:0">本地点坐标与「2048留念.jpg」的EXIF拍摄地点完全吻合——那是北辰父母年轻时常去的地方。</p>
       </div>
       <div style="display:flex;gap:10px">
-        <button class="ms-nav-btn primary" data-action="open-streetview">🗺️ 在星途中打开街景</button>
-        <button class="ms-nav-btn">🧭 导航到这里</button>
+        <button class="ms-nav-btn primary" data-action="open-streetview">在星途中打开街景</button>
+        <button class="ms-nav-btn">导航到这里</button>
       </div>
     </div>
   `),
@@ -1940,7 +2072,7 @@ const PAGES = {
       </div>`);
   },
   forum_top: () => has("forum_open") ? forumThread({
-    author: "守夜人", avatar: "🕯️", time: "2055-06-01 · 置顶", floor: "1楼",
+    author: "守夜人", avatar: "", time: "2055-06-01 · 置顶", floor: "1楼",
     content: `献给所有被遗忘的「冗余体」。
 
 他们告诉你，孩子去了海外深造。他们没告诉你的是：<b>销毁中心</b>位于临港市东郊的地下，对外挂牌「生命科学研究基地」，内部设有「处理室」。
@@ -1979,7 +2111,7 @@ const PAGES = {
     author: "D_张", avatar: "🧔", time: "2066-10-13 20:41", floor: "1楼",
     content: `如果有人看到我的家人，请告诉我。
 
-我姓张，我的儿子也被选中了「销毁」。编号CLC-2048-0412-B——他还是小林B的同学，两个孩子曾在同一个托管班长大。
+我姓张，我的儿子也被选中了「销毁」。编号CLC-2048-0412-B。
 
 我们本打算逃走，但我现在联系不上他们了。`,
     replies: [
@@ -2000,7 +2132,7 @@ const PAGES = {
     })}
     <div style="padding:24px 32px;background:#fff">
       <div style="font-size:11px;color:#9aa0a6;margin-bottom:8px">首页 > 老城区 > 商业设施</div>
-      <h1 style="font-size:24px;font-weight:800;color:#202124;margin-bottom:4px">万象城 · 星都店</h1>
+      <h1 style="font-size:24px;font-weight:800;color:#202124;margin-bottom:4px">万浪城 · 星都店</h1>
       <div style="font-size:12px;color:#9aa0a6;margin-bottom:20px">📍 星都市老城区 · 原市级商业综合体</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px">
         <div style="padding:14px;background:#f8f9fa;border-radius:8px;text-align:center">
@@ -2095,22 +2227,22 @@ const PAGES = {
       { icon: "❤️", num: "128", unit: "只", label: "本月成功领养", trend: "trend-up" }
     ])}
     <div style="padding:24px 32px;background:#fff">
-      <div class="ms-section-title" style="margin-bottom:16px">🐾 本月待领养宠物</div>
+      <div class="ms-section-title" style="margin-bottom:16px">本月待领养宠物</div>
       <div class="ms-cards">
         <div class="ms-card">
-          <div class="ms-card-icon green">🐕</div>
+          <div class="ms-card-icon green" style="font-weight:700">犬</div>
           <div class="ms-card-title">柯基 × 3</div>
           <div class="ms-card-desc">2公1母，均已绝育驱虫，性格温顺亲人。年龄6个月-2岁不等。</div>
           <div class="ms-card-arrow">申请领养 →</div>
         </div>
         <div class="ms-card">
-          <div class="ms-card-icon orange">🐈</div>
+          <div class="ms-card-icon orange" style="font-weight:700">猫</div>
           <div class="ms-card-title">狸花猫 × 7</div>
           <div class="ms-card-desc">中华田园猫，活泼好动，已接种疫苗。适合有养猫经验的家庭。</div>
           <div class="ms-card-arrow">申请领养 →</div>
         </div>
         <div class="ms-card">
-          <div class="ms-card-icon blue">🐕‍🦺</div>
+          <div class="ms-card-icon blue" style="font-weight:700">犬</div>
           <div class="ms-card-title">白色大狗</div>
           <div class="ms-card-desc">不知品种，很乖，会握手。约3岁，已绝育。需要有院子的家庭。</div>
           <div class="ms-card-arrow">申请领养 →</div>
@@ -2206,7 +2338,7 @@ const PAGES = {
           ⚠ 此系统仅供内部人员使用 · 所有操作将被审计
         </div>
         <div class="id-login" style="margin-top:10px">
-          <div style="font-size:12px;color:var(--dim);margin-bottom:6px">🔐 管理员登录</div>
+          <div style="font-size:12px;color:var(--dim);margin-bottom:6px">管理员登录</div>
           <div class="id-form">
             <input value="admin" readonly style="color:var(--warn);background:#0a121d">
             <input id="gov-pass" type="password" placeholder="密码（已失效，请使用漏洞）" autocomplete="off">
@@ -2221,7 +2353,7 @@ const PAGES = {
       </div>
     `);
   },
-  /* ---------- 天象观测站（主线必经） ---------- */
+  
   obs_locked: () => browserChrome(`
     <div class="gov-page">
       <div class="web-header"><h2>星途地图 · 地点详情</h2><span class="wh-url">map.xd.net/place/observatory</span></div>
@@ -2262,12 +2394,12 @@ const PAGES = {
           <div style="position:absolute;bottom:10px;right:14px;font-size:10px;color:#5a7a9a">● 信号弱 · 星途实景 · 2066-10-14</div>
         </div>
         <p><b>天象观测站 · 圆顶建筑</b></p>
-        <p>铁门半掩着，锁是新的，但没有扣上。圆顶建筑在夜色里像一只闭着的眼睛。</p>
-        <p>你推开铁门走进去。大厅里积着灰，但角落里有一张行军床、一个保温壶、和几本摊开的笔记本——<b>有人在这里住过</b>。</p>
-        <p>大厅角落的工作台上，放着一台旧笔记本电脑。电源灯亮着——它还在运行。</p>
+        <p>你站在铁门外，先做了一次<b>远程扫描</b>：局域网内检测到一台旧笔记本电脑（ZHANG-PC）在线，22/3389 端口开放。</p>
+        <p>它跑着星都OS 2051（已停止支持）——这正是老张留下的那台机器。</p>
+        <p>远程连接它，读取里面留下的资料。</p>
         <div style="display:flex;gap:12px;margin-top:16px">
-          <button class="btn btn-primary" data-action="obs-enter-pc">💻 走近那台旧笔记本电脑</button>
-          <button class="btn" data-action="obs-look-around">🔦 再看看周围</button>
+          <button class="btn btn-primary" data-action="obs-enter-pc">远程连接旧笔记本电脑</button>
+          <button class="btn" data-action="obs-look-around">再看看周围</button>
         </div>
         <div id="obs-around"></div>
       </div>
@@ -2281,9 +2413,9 @@ const PAGES = {
     "「3号仓库」相关公开信息不足。也许你还没有找到<b>确切的地点</b>——先收集其他线索：一封旧文档里的手写注释，或地图应用里藏着的地点。<br><span style='color:#587089;font-size:11.5px'>提示：拿到确切地址后，再回来搜索即可命中。</span>"),
   notfound_li: () => hintPage("🫥", "查无此人",
     "公开信息中查无「李医生」相关记录。该姓名可能未在公共网络登记，或相关信息已被过滤。<br><span style='color:#587089;font-size:11.5px'>提示：随着调查深入，隐藏档案可能会以其他方式现身。</span>"),
-  notfound_zhang: () => hintPage("🧔", "公开信息极少",
+  notfound_zhang: () => hintPage("", "公开信息极少",
     "关于「张」的公开信息极少。本地户籍系统中同名记录较多，无法进一步区分。<br><span style='color:#587089;font-size:11.5px'>提示：也许某处加密社区里有更直接的线索。</span>"),
-  notfound_gov: () => hintPage("🔐", "需要密码本",
+  notfound_gov: () => hintPage("", "需要密码本",
     "「政务内网」后台仅对持有密码本的人开放。先去<b>天象观测站</b>（老张的据点）——老张的旧电脑里存着密码本与三份证据，拿到后再回来搜索。<br><span style='color:#587089;font-size:11.5px'>提示：D_张私信里提到的「老地方」。</span>"),
 };
 function hintPage(emoji, title, body) {
@@ -2327,15 +2459,12 @@ function snippetFor(page) {
 }
 function forumLocked() {
   return browserChrome(`<div class="dark-forum" style="text-align:center;padding-top:90px">
-    <div style="font-size:44px">🔒</div>
+    <div style="font-size:30px;font-weight:700;letter-spacing:2px">加密</div>
     <h3 style="margin:14px 0;color:#9fe8b8">需要邀请码</h3>
     <p style="color:#5e8a70;font-size:13px;line-height:2">「暗涌」不接受游客。<br>请从<a data-action="open-page" data-arg="forum" style="color:#7fd6a0;cursor:pointer">论坛首页</a>完成身份校验。</p></div>`);
 }
 function forumHome() {
-  if (!has("dm_sent")) {
-    S.flags.dm_sent = true;
-    setTimeout(() => { deliverMail("zhang_dm", 1200); }, 100);
-  }
+  if (!has("dm_read")) setFlag("dm_read");
   return browserChrome(`
     <div class="dark-forum">
     <div class="an-banner">
@@ -2349,32 +2478,33 @@ function forumHome() {
       <span>节点 <b>onion #7</b></span>
       <span style="margin-left:auto">v3.1.2 · 端到端加密已启用</span>
     </div>
+    <div class="an-dm">
+      <div class="an-dm-head">站内私信 · D_张 <span class="an-dm-new">新</span></div>
+      <div class="an-dm-body">是那个记者吧。老林提过你。<br><br>那我就少废话，你就记三件事：临港，东郊，化工厂3号仓库。10月15日夜里，有一批「货」要转走。里面可能有我儿子，还有老林的媳妇。<br><br>信不信随你。信的话，就别磨蹭。<br><br>——D_张</div>
+      <div class="an-dm-foot">2066-10-13 21:02 · 端到端加密送达</div>
+    </div>
     <div class="web-header" style="border-color:#1f3a2a"><h2>讨论区</h2><span class="wh-url">anyong.onion · 身份已校验 ✓</span></div>
     <div class="forum-thread" data-action="open-page" data-arg="forum_top">
-      <div class="ft-avatar">🕯️</div>
       <div style="flex:1"><div class="ft-title">【置顶】献给所有被遗忘的「冗余体」</div>
-      <div class="ft-meta">守夜人 · 2055-06-01 · 🔥 持续更新 · 一万个编号</div></div>
+      <div class="ft-meta">守夜人 · 2055-06-01 · 持续更新 · 一万个编号</div></div>
       <div class="ft-rep">8 回复</div>
     </div>
     <div class="forum-thread" data-action="open-page" data-arg="forum_b2">
-      <div class="ft-avatar" style="background:#2a1420;border-color:#6b2a3a">🧿</div>
       <div style="flex:1"><div class="ft-title">我的父母选择了我的复制品。</div>
       <div class="ft-meta">另一个我 · 2066-10-13 03:33 · <span class="danger">含高危关键词</span></div></div>
       <div class="ft-rep">7 回复</div>
     </div>
     <div class="forum-thread" data-action="open-page" data-arg="forum_zhang">
-      <div class="ft-avatar">🧔</div>
       <div style="flex:1"><div class="ft-title">如果有人看到我的家人，请告诉我。</div>
       <div class="ft-meta">D_张 · 2066-10-13 20:41 · 寻人</div></div>
       <div class="ft-rep">6 回复</div>
     </div>
     <div class="forum-thread" style="opacity:.45;cursor:default">
-      <div class="ft-avatar">🌫️</div>
       <div style="flex:1"><div class="ft-title">[已删除] 关于生命延续中心地下三层的传闻</div>
       <div class="ft-meta">[站务：该帖作者已「赴海外深造」]</div></div>
       <div class="ft-rep">—</div>
     </div>
-    <div class="hint-box">💡 站规第一条：不要在站内留下任何能定位你真实身份的信息。D_张的<b>站内私信</b>已送达，请在邮箱中查收。</div>
+    <div class="hint-box">站规第一条：不要在站内留下任何能定位你真实身份的信息。D_张的私信已在上方面板送达。</div>
     </div>`);
 }
 function forumThread(t) {
@@ -2383,27 +2513,25 @@ function forumThread(t) {
     <div class="forum-backbar"><button class="btn" data-action="open-page" data-arg="forum">← 返回论坛列表</button></div>
     <div class="web-header" style="border-color:#1f3a2a"><h2 style="font-size:16px">${t.author}：${t.content.split("\n")[0].slice(0, 22)}…</h2><span class="wh-url">anyong.onion · 帖子</span></div>
     <div class="forum-post">
-      <div class="fp-author"><div class="ft-avatar">${t.avatar}</div><span class="fp-name">${t.author}</span><span style="font-size:11px;color:#5e8a70;font-family:var(--mono)">${t.time}</span><span class="fp-floor">${t.floor}</span></div>
+      <div class="fp-author"><span class="fp-name">${t.author}</span><span style="font-size:11px;color:#5e8a70;font-family:var(--mono)">${t.time}</span><span class="fp-floor">${t.floor}</span></div>
       <div style="white-space:pre-wrap">${t.content}</div>
     </div>
     <div class="divider"></div>
     ${t.replies.map((r, i) => `
       <div class="forum-post" style="margin-bottom:16px">
-        <div class="fp-author"><div class="ft-avatar" style="width:28px;height:28px;font-size:13px">${r.avatar || "👤"}</div><span class="fp-name" style="font-size:12.5px">${r.author}</span><span class="fp-floor">${i + 2}楼</span></div>
+        <div class="fp-author"><span class="fp-name" style="font-size:12.5px">${r.author}</span><span class="fp-floor">${i + 2}楼</span></div>
         <div>${r.text}</div>
       </div>`).join("")}
     <div class="hint-box">🧠 你读完了这个帖子。日期、地点、编号——每一个字都可能是证据。</div>
     </div>`);
 }
 
-/* ================================================================
-   星云网盘
-   ================================================================ */
+
 function cloudHome() {
   if (!has("cloud_opened")) {
     return `<div class="app-root">
       <div class="id-login">
-        <div class="id-emblem">🔒</div>
+        <div class="id-emblem" style="font-size:14px;letter-spacing:1px">居民ID</div>
         <h3 class="app-title">星云网盘 · 共享链接</h3>
         <div class="app-sub">分享者：星空之下 · 文件夹：线索</div>
         <div class="pass-hint" style="text-align:center">此文件夹已加密。<br>密码是<b>北辰的生日</b>，格式为 8 位数字（YYYYMMDD）。</div>
@@ -2418,7 +2546,7 @@ function cloudHome() {
   const items = [
     { id: "folder_chats", icon: "📁", name: "爸妈的聊天记录", meta: "3张截图", flag: null },
     { id: "photo2048", icon: "🖼️", name: "2048留念.jpg", meta: "2048-06-01 · 2.4MB", flag: "e_photo" },
-    { id: "note", icon: "📄", name: "不要相信任何人.txt", meta: "1KB", flag: "e_note" },
+    { id: "note", icon: "文", name: "不要相信任何人.txt", meta: "1KB", flag: "e_note" },
   ];
   return `<div class="app-root">
     <h3 class="app-title">☁️ 星云网盘 · 共享链接</h3>
@@ -2452,7 +2580,7 @@ function cloudView(id) {
       <h3 style="margin:10px 0 14px">📁 爸妈的聊天记录</h3>
       <div style="display:flex;flex-direction:column;gap:14px">
         <div class="file-card" style="display:flex;gap:12px;align-items:center;text-align:left;border:1px solid var(--line)" data-action="cloud-view" data-arg="chat1">
-          <div class="fc-icon" style="font-size:26px;margin:0">💬</div>
+          <div class="fc-icon" style="font-size:18px;margin:0;font-weight:700">密</div>
           <div><div class="fc-name">截图1 · 林母与「中心-李医生」</div><div class="fc-meta">2066-09-20</div></div>
         </div>
         <div class="file-card" style="display:flex;gap:12px;align-items:center;text-align:left;border:1px solid var(--line)" data-action="cloud-view" data-arg="chat2">
@@ -2522,7 +2650,7 @@ function cloudView(id) {
     setFlag("e_note");
     return `<div class="file-viewer">
       <button class="btn fv-back" data-action="cloud-home">← 返回</button>
-      <h3 style="margin-bottom:14px">📄 不要相信任何人.txt</h3>
+      <h3 style="margin-bottom:14px">不要相信任何人.txt</h3>
       <div class="txt-file">锁好门窗。
 
 如果你看到「他」，不要惊慌，
@@ -2531,9 +2659,7 @@ function cloudView(id) {
   }
 }
 
-/* ================================================================
-   远程连接 · LIN-PC
-   ================================================================ */
+
 function tryCh1Done() {
   if (has("r_work") && has("r_photo1") && has("r_photo2") && has("r_photo3") && has("safe_opened") && has("usbA_opened") && has("video_watched") && has("letter_read")) {
     setFlag("ch1_done");
@@ -2555,14 +2681,14 @@ function remoteScreen() {
       <div class="remote-desktop-grid">
       <div class="remote-folder" data-action="remote-view" data-arg="work"><div class="rf-icon">📁</div><div class="rf-name">工作文档</div></div>
       <div class="remote-folder" data-action="remote-view" data-arg="photos"><div class="rf-icon">🖼️</div><div class="rf-name">家庭相册</div></div>
-      <div class="remote-folder" data-action="remote-folder2"><div class="rf-icon">🔐</div><div class="rf-name" style="color:var(--warn)">保险箱</div></div>
-      <div class="remote-folder" data-action="remote-view" data-arg="recycle"><div class="rf-icon">🗑️</div><div class="rf-name">回收站</div></div>
+      <div class="remote-folder" data-action="remote-folder2"><div class="rf-icon">密</div><div class="rf-name" style="color:var(--warn)">保险箱</div></div>
+      <div class="remote-folder" data-action="remote-view" data-arg="recycle"><div class="rf-icon">回</div><div class="rf-name">回收站</div></div>
       </div>
     </div>
     <div class="remote-dock">
       <span class="rd-item" title="发送文件（只读会话不可用）">📤 传输</span>
       <span class="rd-item" title="剪贴板同步">📋 剪贴板</span>
-      <span class="rd-item" title="远程聊天">💬 聊天</span>
+      <span class="rd-item" title="远程聊天">聊天</span>
       <span class="rd-item" title="录制会话">⏺ 录制</span>
       <span class="rd-spacer"></span>
       <span class="rd-item rd-close" data-action="win-close" data-arg="remote">⏻ 结束会话</span>
@@ -2659,7 +2785,7 @@ function remoteUsbALocked() {
     <div class="remote-topbar"><span class="dot-live"></span> LIN-PC · U盘A · <span style="color:var(--danger)">已加密（AES-256）</span></div>
     <div class="remote-screen" style="flex:1;text-align:center">
       <button class="btn" style="margin-bottom:14px" data-action="remote-view" data-arg="safe_inside">← 返回保险箱</button>
-      <div style="font-size:52px;margin:30px 0 14px">🔒</div>
+      <div style="font-size:26px;margin:30px 0 14px;font-weight:700;letter-spacing:3px">密码保险箱</div>
       <div style="font-size:14px;color:var(--warn);letter-spacing:2px">此U盘已被加密</div>
       <div class="locked-note" style="margin-top:10px">内容已全部加密。没有密码，你只能看到这一把锁。</div>
       <button class="btn btn-primary" style="margin-top:22px" data-action="remote-view" data-arg="usbA">🔑 输入密码解密</button>
@@ -2671,23 +2797,27 @@ function remoteUsbA() {
     <div class="remote-topbar"><span class="dot-live"></span> LIN-PC · U盘A（已解密）· 邮件往来记录.eml</div>
     <div style="flex:1;overflow:auto;padding:22px 28px">
       <button class="btn" style="margin-bottom:14px" data-action="remote-view" data-arg="safe_inside">← 返回保险箱</button>
-      <div class="txt-file">【林父 ↔ 老张 · 邮件往来（节选）】
-
-老张 → 林某（2060-11-02）
-测试中心的问卷又下来了。按上次说的，把B卷「心理稳定性」那栏的分数往低了改。
-我们救不了两个。让落选的那一个……走得别那么疼。
-
-林某 → 老张（2060-11-03）
-改好了。原谅我们。这辈子就这一次。
-
-老张 → 林某（2066-10-05）
-老林，复查通知是真的。我们的问卷「存疑」了。老地方见，我有个计划。
-
-林某 → 老张（2066-10-07）
-计划我看了。为了北辰，我什么都愿意。
-如果出事，暗号还是老样子。
-
-—— PS（老张附言）：「密码还是老样子，你知道的。」</div>
+      <div class="mail-shot">
+        <div class="ms-titlebar"><span class="ms-dots"><i></i><i></i><i></i></span><span>星都邮 · 客户端</span><span class="ms-min">— □ ×</span></div>
+        <div class="ms-sub">与 老张 的往来邮件 · 共4封 · 截图存档</div>
+        <div class="ms-item">
+          <div class="msm-head"><b>老张</b> → 林某 <span class="msm-time">2060-11-02</span></div>
+          <div class="msm-body">测试中心的问卷又下来了。按上次说的，把B卷「心理稳定性」那栏的分数往低了改。<br>我们救不了两个。让落选的那一个……走得别那么疼。</div>
+        </div>
+        <div class="ms-item">
+          <div class="msm-head"><b>林某</b> → 老张 <span class="msm-time">2060-11-03</span></div>
+          <div class="msm-body">改好了。原谅我们。这辈子就这一次。</div>
+        </div>
+        <div class="ms-item">
+          <div class="msm-head"><b>老张</b> → 林某 <span class="msm-time">2066-10-05</span></div>
+          <div class="msm-body">老林，复查通知是真的。我们的问卷「存疑」了。老地方见，我有个计划。</div>
+        </div>
+        <div class="ms-item">
+          <div class="msm-head"><b>林某</b> → 老张 <span class="msm-time">2066-10-07</span></div>
+          <div class="msm-body">计划我看了。为了北辰，我什么都愿意。<br>如果出事，暗号还是老样子。</div>
+        </div>
+        <div class="ms-ps">PS（老张附言）：「密码还是老样子，你知道的。」</div>
+      </div>
     </div>
   </div>`;
 }
@@ -2701,21 +2831,7 @@ function remoteUsbB() {
       <div class="dossier">
         <div class="dossier-head"><span>B_契约.mp4</span><span class="tag red">文件头损坏 · 已启用星灵AI配音</span></div>
         <div class="dossier-body">
-          <button class="btn btn-primary" style="margin-bottom:10px" data-action="play-v3">▶ 播放星灵AI配音（00:47）</button>
-          <div class="locked-note" style="margin-bottom:10px">⚠ 视频流已损坏，播放器无法解码。文件系统检测到内嵌音轨完好，已自动转写为文字：</div>
-          <div class="txt-file">【自动转写 · B_契约.mp4 · 时长00:47】
-
-（画面：一个白色的房间。一个十七岁左右的少年被绑在椅子上。
-一个穿白大褂的男人站在他面前。）
-
-李医生：「小林B，你知道你父母为什么把你送到这里来吗？」
-
-小林B（表情麻木）：「因为他们选了那个废物。」
-
-李医生：「你很聪明。我们来做个交易。
-你帮我们做一件事，我让你活着出去。」
-
-（录制中断。文件名：B_契约.mp4）</div>
+          <div class="locked-note" style="margin-bottom:10px">⚠ 视频流已损坏，播放器无法解码。文件系统检测到内嵌音轨完好，已自动转写至<b>语音助手 · 星灵</b>——打开「语音」应用即可播放并查看转写。</div>
         </div>
       </div>
     </div>
@@ -2728,7 +2844,7 @@ function remoteRecycle() {
     <div class="remote-screen" style="flex:1">
       <button class="btn" style="margin-bottom:14px" data-action="remote-desktop">← 返回桌面</button>
       <div class="file-card" style="display:inline-flex;gap:12px;align-items:center;border:1px dashed #8a2a3a" data-action="restore-letter">
-        <div class="fc-icon" style="font-size:34px;margin:0">🗑️</div>
+        <div class="fc-icon" style="font-size:22px;margin:0;font-weight:700">删</div>
         <div><div class="fc-name">「给北辰的信」（已删除）</div><div class="fc-meta">删除于 10月7日 23:58 · 点击恢复</div></div>
       </div>
       <div id="letter-box">${has("letter_read") ? letterHtml() : ""}</div>
@@ -2736,7 +2852,9 @@ function remoteRecycle() {
   </div>`;
 }
 function letterHtml() {
-  return `<div class="envelope" style="margin-top:18px">亲爱的北辰：
+  return `<div class="chat-envelope" style="margin-top:18px;max-width:560px">
+  <div class="ce-bar"><span>给北辰的信</span><span class="ce-tag">回收站 · 已恢复</span></div>
+  <div class="ce-body">亲爱的北辰：
 
 当你看到这封信时，爸爸妈妈可能已经不在你身边了。我们犯了一个很大的错误，我们以为我们可以用爱来弥补规则的缺陷，但我们错了。
 
@@ -2747,41 +2865,41 @@ function letterHtml() {
 永远爱你的，
 爸爸 妈妈
 2066.10.07</div>
+</div>
 `;
 }
 
-/* ================================================================
-   加密频道
-   ================================================================ */
+
 function chatHtml() {
   chatInit();
   const m = S.ui.chat.msgs;
   let controls = "";
-  if (has("remote_granted") && !has("talk_mama") && !has("ch3_started")) {
-    controls = `<button class="btn btn-primary" data-action="chat-ask-mama">❓ 询问加密用户BC：你第一次开口说话是什么时候？</button>`;
-  }
   if (has("ch3_started") && !has("ch3_chose")) {
     controls = `
-      <button class="btn btn-primary" data-action="chat-choice" data-arg="open">🚪 让他开门，和「小林B」谈谈</button>
-      <button class="btn btn-danger" data-action="chat-choice" data-arg="lock">🔒 让他锁好门，不要回应</button>`;
+      <button class="btn btn-primary" data-action="chat-choice" data-arg="open">让他开门，和「小林B」谈谈</button>
+      <button class="btn btn-danger" data-action="chat-choice" data-arg="lock">让他锁好门，不要回应</button>`;
   }
   if (has("ch3_chose") && !has("b_letter")) {
-    controls = `<button class="btn btn-primary" data-action="chat-letter-done">✉️ 读完这封信</button>`;
+    controls = `<button class="btn btn-primary" data-action="chat-letter-done">读完这封信</button>`;
   }
   return `<div class="chat-app tg">
     <div class="chat-head tg-head">
       <div class="ch-info"><div class="ch-name">加密用户BC</div><div class="ch-status"><span class="dot-live"></span> 在线 · 端到端加密</div></div>
-      <div class="ch-actions"><span title="语音通话">📞</span><span title="视频通话">🎥</span><span title="菜单">⋯</span></div>
+      <div class="ch-actions"><span title="语音通话">话</span><span title="视频通话">视</span><span title="菜单">⋯</span></div>
     </div>
     <div class="chat-scroll tg-scroll" id="chat-scroll">
       <div class="chat-day">2066年10月</div>
       ${m.map(x => {
         if (x.who === "sys") return `<div class="chat-day">${esc(x.text)}</div>`;
-        if (x.who === "envelope") return `<div class="envelope">${x.text}</div>`;
+        if (x.who === "envelope") return `<div class="chat-envelope">
+            <div class="ce-bar"><span>北辰B的信</span><span class="ce-tag">图片扫描件</span></div>
+            <div class="ce-body">${esc(x.text).replace(/\n/g, "<br>")}</div>
+            <div class="ce-foot">—— 来自加密频道的扫描件</div>
+          </div>`;
         if (x.voice) {
           return `<div class="chat-row them"><div class="chat-bubble tg-bubble them">
             <div class="cb-sender">${esc(x.sender || "加密用户BC")}</div>
-            <div class="voice-msg">🎤 <span class="voice-wave"></span> 语音消息 · 0:08</div>
+            <div class="voice-msg"><span class="voice-wave"></span> 语音消息 · 0:08</div>
             <div class="voice-transcript">「${esc(x.voice)}」</div>
             <div class="voice-saved">✓ 已添加至星灵语音助手</div>
           </div></div>`;
@@ -2795,20 +2913,7 @@ function chatHtml() {
     <div class="chat-inputbar tg-inputbar">${controls || `<span style="font-size:12px;color:var(--dim)">（消息已加密同步 · 无内容可发送）</span>`}</div>
   </div>`;
 }
-function chatAskMama() {
-  if (has("talk_mama")) return;
-  setFlag("talk_mama");
-  chatPush("me", "加密用户BC，问你个事——你小时候第一次开口说话，是什么时候？保险箱的密码提示是这个。");
-  setTimeout(() => chatPush("them", "嗯……这个我得想想。你等我一下，我去翻我妈的朋友圈。", "加密用户BC"), 700);
-  setTimeout(() => {
-    chatPush("them", "找到了！我妈发过一条：『今天北辰第一次开口叫妈妈，2049年3月12日，他爸哭得比我还厉害。』日期就是这个！", "加密用户BC");
-    toast("🔑 密码素材", "保险箱密码 = 2049年3月12日 → <b>20490312</b>", "warn");
-  }, 1900);
-}
 
-/* ================================================================
-   星途地图
-   ================================================================ */
 const MAP_PINS = [
   { x: 22, y: 64, name: "小林家 · 青云路", info: "北辰的家。楼下的便利店店员见过一个穿黑西装的男人。" },
   { x: 45, y: 38, name: "星都市生命延续中心", info: "2048留念.jpg的拍摄地。双子计划的运营方。" },
@@ -2823,7 +2928,7 @@ function mapHtml() {
       <div class="mp-label">红星路34号（新标记）</div>
     </div>` : "";
   return `<div class="app-root">
-    <h3 class="app-title">🗺️ 星途地图 <span class="tag">星都 · 临港</span></h3>
+    <h3 class="app-title">星途地图 <span class="tag">星都 · 临港</span></h3>
     <div class="app-sub">搜索地址 · 查看街景 · 部分区域涉密</div>
     <div class="map-view" style="height:300px">
       <div class="map-road" style="left:0;right:0;top:55%;height:10px"></div>
@@ -2843,7 +2948,7 @@ function streetViewHtml() {
   const dialed = S.ui.map.dial || "";
   const done = has("invite_known");
   return `<div class="app-root">
-    <h3 class="app-title">🗺️ 星途 · 街景 <span class="tag">老城区 · 红星路34号</span></h3>
+    <h3 class="app-title">星途 · 街景 <span class="tag">老城区 · 红星路34号</span></h3>
     <div class="street-view">
       <img src="assets/Aurora.png" alt="极光网络会所旧址" referrerpolicy="no-referrer" style="width:100%;height:100%;object-fit:cover;display:block">
     </div>
@@ -2861,9 +2966,7 @@ function streetViewHtml() {
   </div>`;
 }
 
-/* ================================================================
-   ID系统 · 记者权限 + 母体档案库后门
-   ================================================================ */
+
 function idScreen() {
   const mode = S.ui.id.mode;
   const dbBrandIcon = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#7fd0ff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><rect x="2.5" y="5" width="19" height="14" rx="2"/><circle cx="8.5" cy="11" r="2"/><path d="M5.5 16c.6-1.6 1.7-2.4 3-2.4s2.4.8 3 2.4M14 10h5M14 13.5h3.5"/></svg>`;
@@ -2967,12 +3070,12 @@ function idScreen() {
       <div class="db-alert">🔍 隐藏窗口发现：复核通道下挂载了一段未归档录音，标注为「李医生_自述」。</div>
       ${S.ui.id.tapeDecrypted ? `
       <div class="cassette" data-action="play-li-tape">
-        <div class="cs-icon">🎙️</div>
+        <div class="cs-icon" style="font-weight:700">声</div>
         <div><div style="font-size:14px">李医生_自述.wav</div><div style="font-size:11px;color:#5f7ea8;font-family:var(--mono)">时长 01:12 · 未归档 · 点击播放</div></div>
       </div>
       <div id="tape-box"></div>` : `
       <div class="enc-tape-card">
-        <div style="font-size:14px;margin-bottom:4px">🔒 李医生_自述.wav <span class="tag">员工私钥加密</span></div>
+        <div style="font-size:14px;margin-bottom:4px">李医生_自述.wav <span class="tag">员工私钥加密</span></div>
         <div style="font-size:11.5px;color:var(--dim);margin-bottom:12px">密文 ██▓▒░ …… 无法直接播放。这条录音本是通过地下渠道流转出来的——用你当初进暗涌时那扇门的数字打开它。</div>
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
           <input id="tape-dec-key" placeholder="输入4位密钥" maxlength="4" inputmode="numeric" autocomplete="off" style="width:150px;background:#0e0e0a;border:1px solid #243040;color:#9fd0ff;padding:9px 12px;border-radius:6px;font-family:var(--mono,monospace);letter-spacing:4px;text-align:center">
@@ -3005,7 +3108,7 @@ function liTapeHtml() {
 }
 
 function govHackResult() {
-  const plainDoc = `<div style="background:#0a120c;padding:18px 22px;border-radius:8px;border:1px solid #1e3a28;font-size:13px;line-height:2.2;color:#b8ccdd">
+  const plainDoc = `<div style="background:#0a120c;padding:18px 22px;border-radius:8px;border:1px solid #1e3a28;font-size:13px;line-height:2.2;color:#dce9f4;word-break:break-word;overflow-wrap:anywhere;max-width:100%">
         <b style="color:var(--warn)">📄 双子计划_实施方案_2048.docx</b><br>
         <span style="color:#7f93aa">密级：内部公开 · 仅限科级以上</span><br><br>
         <b>一、项目背景</b><br>
@@ -3030,18 +3133,26 @@ function govHackResult() {
       <div class="gov-banner" style="background:linear-gradient(90deg,#3a2a1a,#1a120a);border-color:#8a6a2a;">
         ⚠️ 越权访问成功，但目标文件已被 AES-256 加密
       </div>
-      <div style="background:#0e0e0a;padding:18px 22px;border-radius:8px;border:1px solid #3a3018;font-size:13px;line-height:2;color:#6a6048;font-family:var(--mono,monospace)">
+      <div style="background:#0e0e0a;padding:18px 22px;border-radius:8px;border:1px solid #3a3018;font-size:13px;line-height:2;color:#cdbd82;font-family:var(--mono,monospace)">
         <b style="color:#d8b860">📄 双子计划_实施方案_2048.docx</b><br>
-        <span style="color:#5a5038">密级：内部公开 · 已加密 · 尝试离线破解…</span><br><br>
+        <span style="color:#a29468">密级：内部公开 · 已加密 · 尝试离线破解…</span><br><br>
         ██ ▓▓ █░ █▒▒ ▓░█ ▒░█ ▓▓ █░ ▒▒█ ░█▓ ▒▓░ █▒░ ▓█░ ▒▓░ █░█ ▒▓░ █▒ ░▒ █░ ▓▒ █░<br>
         ▒░█ ▓░█ ▒▓░ █▒░ ▓█░ ▒▓░ █░█ ▒▓░ █▒ ░▒ █░ ▓▒ █░ █▒░ ▓█░ ▒▓░ █░█ ▒▓░ █▒ ░▒
       </div>
       <div style="margin-top:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <input id="gov-dec-key" placeholder="输入密码本密钥（4位数字）" maxlength="4" inputmode="numeric" autocomplete="off" style="width:200px;background:#0e0e0a;border:1px solid #3a3018;color:#d8b860;padding:9px 12px;border-radius:6px;font-family:var(--mono,monospace);letter-spacing:4px;text-align:center">
-        <button class="btn btn-primary" data-action="gov-decrypt">🔓 离线解密</button>
+        <button class="btn btn-primary" data-action="gov-decrypt">离线解密</button>
       </div>
       <div id="gov-dec-err" style="color:#ff8a8a;font-size:12.5px;margin-top:8px;min-height:18px"></div>
-      <div class="hint-box" style="margin-top:14px">💡 这份文件加密层很新，但你在<b>天象观测站老张的旧电脑</b>里见过同一套加密器——墙上那张被红笔圈出的星图旁，写着他儿子的编号后四位。密码本就是它。</div>
+      <div class="gov-morse" style="margin-top:16px;background:#0e0e0a;border:1px solid #3a3018;border-radius:8px;padding:14px 16px">
+        <div style="font-size:12.5px;color:#d8b860;letter-spacing:1px;margin-bottom:8px">密码本线索 · 摩斯密码</div>
+        <div style="font-size:12.5px;color:#c9b97c;line-height:1.9">观测站墙上星图旁，红笔圈着四个数字，下面压着一行点划：<b style="color:#f0e0a0;letter-spacing:2px;font-family:var(--mono,monospace)">----- ....- .---- ..---</b></div>
+        <div style="display:flex;gap:12px;align-items:center;margin-top:10px;flex-wrap:wrap">
+          <button class="btn" data-action="play-morse">▶ 播放摩斯音频</button>
+          <img src="assets/Morse Code Chart.png" alt="摩斯密码对照表" style="height:60px;border-radius:6px;border:1px solid #3a3018" title="摩斯密码对照表">
+        </div>
+        <div style="font-size:11.5px;color:#8a7a58;margin-top:8px">对照上图翻译这行点划，得到的四位数字就是密码本。</div>
+      </div>
     </div>
   `);
   }
@@ -3056,9 +3167,7 @@ function govHackResult() {
   `);
 }
 
-/* ================================================================
-   天象观测站 · 旧电脑（主线必经）
-   ================================================================ */
+
 function obsPcScreen() {
   if (S.ui.obs.unlocked) { S.ui.obs.view = "pc_home"; return obsPcHome(); }
   const tried = S.ui.obs.tried || [];
@@ -3091,7 +3200,6 @@ function obsPcHome() {
     <div class="gov-page">
       <div class="web-header"><h2>ZHANG-PC · 桌面</h2><span class="wh-url">local · 已登录</span></div>
       <div class="gov-article">
-        <p style="font-size:12px;color:#587089">桌面背景是一张照片：两个小男孩在观测站的望远镜前比剪刀手。一个是老张的儿子，另一个——你认出了那张脸。</p>
         <div style="display:flex;flex-direction:column;gap:12px;margin-top:14px">
           <div class="file-card" style="display:flex;gap:12px;align-items:center;text-align:left;border:1px solid var(--line);cursor:pointer" data-action="obs-file" data-arg="diary">
             <div class="fc-icon" style="font-size:26px;margin:0">📓</div>
@@ -3106,13 +3214,14 @@ function obsPcHome() {
             <div><div class="fc-name">3号仓库_内部结构图.png ${has("obs_map") ? "✓" : ""}</div><div class="fc-meta">手绘 · 标注牢房区/监控室/配电室/货运月台</div></div>
           </div>
         </div>
-        <div class="hint-box" style="margin-top:16px">💡 这台电脑里的东西，是老张用命换来的情报。逐一打开看看。</div>
+        <div class="hint-box" style="margin-top:16px">这台电脑里的东西，是老张用命换来的情报。逐一打开看看。</div>
         <div style="margin-top:14px"><button class="btn" data-action="obs-back-outside">← 关闭电脑，回到观测站</button></div>
       </div>
     </div>`);
 }
 function obsDiary() {
   setFlag("obs_diary");
+  if (!inbox.some(m => m.id === "m_gov_lead")) deliverMail("gov_lead", 900);
   return browserChrome(`
     <div class="gov-page">
       <div class="web-header"><h2>📓 老张_日记.txt</h2><span class="wh-url">ZHANG-PC · 桌面</span></div>
@@ -3135,6 +3244,10 @@ function obsDiary() {
 <b>2066-10-13 · 最后一条</b>
 我在暗涌上发了寻人帖。如果有记者看到，请到天象观测站来。电脑密码是我儿子编号的最后四位——0412。
 老张，如果你看到这封信，对不起，爸爸没能把你带回家。
+
+<b>2066-10-13 · 补充</b>
+记者，如果你看到这条，听我说完：政务内网的漏洞入口，我已经匿名发到你的邮箱里了——发件人没有署名。找到它，入侵后台，下载那份《双子计划》文件。
+密码是我儿子编号的后四位，也是墙上星图旁红笔圈的数字。星图下压着一行点划：摩斯码 <b style="font-family:var(--mono);letter-spacing:2px">----- ....- .---- ..---</b>。
       </div>
       <div style="margin-top:14px"><button class="btn" data-action="obs-back-pc">← 返回电脑桌面</button></div>
     </div>`);
@@ -3148,7 +3261,7 @@ function obsBribe() {
         <p style="font-size:12px;color:#587089">老张从中心内部渠道获得的转账记录摘要。所有金额单位：星元。</p>
         <table style="width:100%;border-collapse:collapse;font-size:12.5px;margin-top:10px">
           <thead>
-            <tr style="background:#1a2a3a;color:#8ab4d8">
+            <tr style="background:#1e3248;color:#bcdcf4">
               <th style="padding:8px;border:1px solid #2a3a4a;text-align:left">日期</th>
               <th style="padding:8px;border:1px solid #2a3a4a;text-align:left">评估员</th>
               <th style="padding:8px;border:1px solid #2a3a4a;text-align:left">金额</th>
@@ -3156,7 +3269,7 @@ function obsBribe() {
               <th style="padding:8px;border:1px solid #2a3a4a;text-align:left">操作</th>
             </tr>
           </thead>
-          <tbody style="color:#b8cbdd">
+          <tbody style="color:#e8f1f9">
             <tr><td style="padding:7px;border:1px solid #1a2a3a">2064-11-03</td><td style="padding:7px;border:1px solid #1a2a3a">李某某（李医生）</td><td style="padding:7px;border:1px solid #1a2a3a;color:#ffaa44">85,000</td><td style="padding:7px;border:1px solid #1a2a3a;font-family:var(--mono)">CLC-2046-1108-B</td><td style="padding:7px;border:1px solid #1a2a3a">心理分 82→31</td></tr>
             <tr style="background:rgba(255,170,68,.04)"><td style="padding:7px;border:1px solid #1a2a3a">2065-06-18</td><td style="padding:7px;border:1px solid #1a2a3a">王某某</td><td style="padding:7px;border:1px solid #1a2a3a;color:#ffaa44">120,000</td><td style="padding:7px;border:1px solid #1a2a3a;font-family:var(--mono)">CLC-2047-0521-A</td><td style="padding:7px;border:1px solid #1a2a3a">智力分 68→95</td></tr>
             <tr><td style="padding:7px;border:1px solid #1a2a3a">2065-09-02</td><td style="padding:7px;border:1px solid #1a2a3a">李某某</td><td style="padding:7px;border:1px solid #1a2a3a;color:#ffaa44">65,000</td><td style="padding:7px;border:1px solid #1a2a3a;font-family:var(--mono)">CLC-2047-0915-B</td><td style="padding:7px;border:1px solid #1a2a3a">创造力 140→88</td></tr>
@@ -3164,7 +3277,7 @@ function obsBribe() {
             <tr><td style="padding:7px;border:1px solid #1a2a3a">2066-08-20</td><td style="padding:7px;border:1px solid #1a2a3a">李某某</td><td style="padding:7px;border:1px solid #1a2a3a;color:#ff4444">未收取</td><td style="padding:7px;border:1px solid #1a2a3a;font-family:var(--mono)">CLC-2048-1015-B（林北辰B）</td><td style="padding:7px;border:1px solid #1a2a3a">心理分 90→35（强行篡改）</td></tr>
           </tbody>
         </table>
-        <p style="font-size:12px;color:#587089;margin-top:12px">合计：5笔记录，涉及3名评估员，总金额 470,000 星元。最后一行标注「未收取」——林父拒绝了贿赂，但李医生仍然强行篡改了小林B的心理评分。</p>
+        <p style="font-size:12.5px;color:#8fb4d8;margin-top:12px">合计：5笔记录，涉及3名评估员，总金额 470,000 星元。最后一行标注「未收取」——林父拒绝了贿赂，但李医生仍然强行篡改了小林B的心理评分。</p>
         <div style="margin-top:14px"><button class="btn" data-action="obs-back-pc">← 返回电脑桌面</button></div>
       </div>
     </div>`);
@@ -3175,45 +3288,15 @@ function obsWarehouseMap() {
     <div class="gov-page">
       <div class="web-header"><h2>🗺️ 3号仓库_内部结构图.png</h2><span class="wh-url">ZHANG-PC · 桌面 · 手绘</span></div>
       <div class="gov-article">
-        <p style="font-size:12px;color:#587089">老张手绘的仓库内部布局。铅笔线条，标注了红笔。</p>
-        <div style="background:#0f1a14;padding:20px;border-radius:8px;border:1px solid #2a4a3a;margin:14px 0;position:relative;height:320px;font-family:var(--mono);font-size:11px">
-          <div style="position:absolute;top:10px;left:10px;color:#5a8a6a">3号仓库 · 地下一层 · 比例约1:200</div>
-          <div style="position:absolute;top:40px;left:30px;width:180px;height:100px;border:2px solid #4a6a5a;border-radius:4px;background:rgba(74,106,90,.15)">
-            <div style="position:absolute;top:4px;left:8px;color:#8ab89a">📦 仓储区A</div>
-            <div style="position:absolute;bottom:4px;left:8px;color:#5a7a6a;font-size:10px">（已废弃物资）</div>
-          </div>
-          <div style="position:absolute;top:40px;left:230px;width:140px;height:100px;border:2px solid #aa4444;border-radius:4px;background:rgba(170,68,68,.15)">
-            <div style="position:absolute;top:4px;left:8px;color:#d88a8a">🔒 牢房区</div>
-            <div style="position:absolute;bottom:4px;left:8px;color:#aa6a6a;font-size:10px">8间 · 关押「冗余体」</div>
-            <div style="position:absolute;top:30px;left:50px;width:30px;height:20px;border:1px solid #aa4444;background:rgba(170,68,68,.3)"></div>
-          </div>
-          <div style="position:absolute;top:40px;left:390px;width:120px;height:100px;border:2px solid #4a5a8a;border-radius:4px;background:rgba(74,90,138,.15)">
-            <div style="position:absolute;top:4px;left:8px;color:#8a9ad8">🖥️ 监控室</div>
-            <div style="position:absolute;bottom:4px;left:8px;color:#5a6a9a;font-size:10px">4路信号 · 值班2人</div>
-          </div>
-          <div style="position:absolute;top:160px;left:30px;width:120px;height:80px;border:2px solid #8a7a4a;border-radius:4px;background:rgba(138,122,74,.15)">
-            <div style="position:absolute;top:4px;left:8px;color:#d8c898">⚡ 配电室</div>
-            <div style="position:absolute;bottom:4px;left:8px;color:#aa9a6a;font-size:10px">总闸 · 可切断全仓</div>
-          </div>
-          <div style="position:absolute;top:160px;left:170px;width:200px;height:80px;border:2px dashed #4a6a5a;border-radius:4px">
-            <div style="position:absolute;top:4px;left:8px;color:#6a8a7a">🚶 中央通道</div>
-          </div>
-          <div style="position:absolute;top:160px;left:390px;width:120px;height:80px;border:2px solid #6a5a8a;border-radius:4px;background:rgba(106,90,138,.15)">
-            <div style="position:absolute;top:4px;left:8px;color:#a89ad8">🚪 货运月台</div>
-            <div style="position:absolute;bottom:4px;left:8px;color:#7a6aaa;font-size:10px">转运车辆出入口</div>
-          </div>
-          <div style="position:absolute;bottom:10px;left:30px;right:30px;height:30px;border-top:2px solid #3a5a4a;display:flex;align-items:center;justify-content:center;color:#5a7a6a;font-size:10px">
-            ← 通风管道（可通行） → ｜ 红笔标注：「配电室→监控室电源在同一回路」
-          </div>
-        </div>
+        <p style="font-size:12px;color:#8fb4d8">老张手绘的仓库内部布局，已扫描存档。</p>
+        <img src="assets/3号仓库_内部结构图.png" alt="3号仓库内部结构图" style="width:100%;max-width:640px;border-radius:10px;border:1px solid #2a4a3a;display:block;margin:14px 0">
+        <p style="font-size:12px;color:#8fb4d8">红笔标注：「配电室→监控室电源在同一回路」。通风管道可通行。</p>
         <div style="margin-top:14px"><button class="btn" data-action="obs-back-pc">← 返回电脑桌面</button></div>
       </div>
     </div>`);
 }
 
-/* ================================================================
-   新闻后台 CMS
-   ================================================================ */
+
 function cmsScreen() {
   const tab = S.ui.cms.tab;
   const tipsHtml = `
@@ -3258,7 +3341,7 @@ function cmsScreen() {
   return `<div class="app-root">
     <div class="cms-header">
       <div class="cms-logo">📰 星都<em>观察者</em> · 后台</div>
-      <div class="cms-role">实习记者 · 我的工位</div>
+      <div class="cms-role">沈砚 · 实习记者 · 我的工位</div>
     </div>
     <div style="display:flex;gap:10px">
       <button class="btn ${tab === "tips" ? "btn-primary" : ""}" data-action="cms-tab" data-arg="tips">收件箱</button>
@@ -3269,9 +3352,7 @@ function cmsScreen() {
   </div>`;
 }
 
-/* ================================================================
-   语音助手 · 星灵
-   ================================================================ */
+
 function voiceHtml() {
   const avail = evidences.filter(e => e.need());
   const sel = avail.find(e => e.id === S.ui.voice.sel) || null;
@@ -3279,7 +3360,7 @@ function voiceHtml() {
   return `<div class="app-root">
     <h3 class="app-title">🎙️ 语音助手 · 星灵</h3>
     <div class="app-sub">采访录音与线索语音 · 共 ${avail.length} 条可用</div>
-    <div class="voice-privacy">🔐 为保护隐私，原声已加密存储，仅供星灵AI声纹分析。播放声音为星灵AI生成</div>
+    <div class="voice-privacy">为保护隐私，原声已加密存储，仅供星灵AI声纹分析。播放声音为星灵AI生成</div>
     <div class="voice-list">
       ${avail.map(e => `
         <div class="voice-item ${sel && sel.id === e.id ? "playing" : ""}" data-action="voice-select" data-arg="${e.id}">
@@ -3295,27 +3376,25 @@ function voiceHtml() {
         </div>`).join("") || `<div class="locked-note">暂无可播放的语音。</div>`}
     </div>
     ${sel ? `
-      <div class="transcript">
+      <div class="transcript" id="voice-transcript">
         <div class="t-label">语音转写 · TRANSCRIPT</div>
         <div style="white-space:pre-wrap">${esc(sel.transcript)}</div>
-      </div>` : `<div class="hint-box">🎧 点击「播放」聆听录音，转写文本会自动显示。</div>`}
+      </div>` : `<div class="hint-box">点击「播放」聆听录音，转写文本会自动显示。</div>`}
     <div class="vp-panel">
-      <div style="font-size:12px;color:var(--dim);letter-spacing:2px;margin-bottom:8px">🧬 声纹分析 · 比对两段音频是否来自同一人</div>
+      <div style="font-size:12px;color:var(--dim);letter-spacing:2px;margin-bottom:8px">声纹分析 · 比对两段音频是否来自同一人</div>
       ${avail.length >= 2 ? `
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <select id="vp-a">${opts(S.ui.voice.vpA)}</select>
         <span style="color:var(--dim)">vs</span>
         <select id="vp-b">${opts(S.ui.voice.vpB)}</select>
         <button class="btn btn-primary" data-action="vp-compare">开始比对</button>
-      </div>` : `<div class="vp-note">🔒 收集到至少两段语音后，声纹比对功能才会解锁（当前 ${avail.length}/2）。继续调查吧。</div>`}
+      </div>` : `<div class="vp-note">收集到至少两段语音后，声纹比对功能才会解锁（当前 ${avail.length}/2）。继续调查吧。</div>`}
       <div class="vp-result" id="vp-result">${S.ui.voice.vpResult || ""}</div>
     </div>
   </div>`;
 }
 
-/* ================================================================
-   任务目标
-   ================================================================ */
+
 function remoteProgress() {
   const a = ["r_work", "r_photo1", "r_photo2", "r_photo3", "letter_read"].filter(has).length;
   const b = (has("safe_opened") ? 1 : 0) + (has("usbA_opened") ? 1 : 0) + (has("video_watched") ? 1 : 0);
@@ -3356,13 +3435,14 @@ function objectiveList() {
   add("在加密频道面对「开门」，读完北辰B的信", has("b_letter"), has("gov_decrypted") && !has("b_letter"));
   add("登录母体档案库，调阅档案与李医生录音", has("truth_known"), has("b_letter") && !has("truth_known"));
   add("做出你的最终选择", has("game_over"), has("truth_known") && !has("game_over"));
+  if (has("game_over")) add("体验其他结局：回到简介，快速重玩「最后的抉择」", true, true);
   return L;
 }
 function objectivesHtml() {
   if (S.difficulty !== "easy") {
     return `<h3 class="app-title">◎ 任务目标</h3>
     <div class="app-sub">普通难度</div>
-    <div class="hint-box" style="border-left-color:#8a6a2a;background:rgba(255,180,84,.06);color:#d8b98a">🔇 普通难度不提供任务目标与提示。<br>线索要靠你自己拼——卡住时，桌面同目录下的《代号：双子》完整攻略.docx 就是你的任务清单。</div>`;
+    <div class="hint-box" style="border-left-color:#8a6a2a;background:rgba(255,180,84,.06);color:#d8b98a">🔇 普通难度不提供任务目标与提示。<br>线索要靠你自己拼——卡住时，桌面同目录下的《星都双子》完整攻略.docx 就是你的任务清单。</div>`;
   }
   const list = objectiveList()
     .filter(i => i.done || i.current)
@@ -3390,9 +3470,7 @@ function renderObjectives() {
   if (S.windows.obj) refreshApp("obj");
 }
 
-/* ================================================================
-   密码 / 模态
-   ================================================================ */
+
 function openModal(html) { $("#modal-box").innerHTML = html; $("#modal-layer").classList.remove("hidden"); }
 function closeModal() { $("#modal-layer").classList.add("hidden"); }
 function passwordModal(opt) {
@@ -3430,9 +3508,7 @@ function tryPassword() {
   }
 }
 
-/* ================================================================
-   章节过场 / 猫眼 / 结局
-   ================================================================ */
+
 let chapterQueue = null;
 function showChapter(title, desc, after) {
   chapterQueue = after || null;
@@ -3464,14 +3540,14 @@ function showPeephole(desc, tablet, caption, after) {
   $("#peephole-screen").classList.remove("hidden");
   beep(988, .3, .12);
 }
-/* ---------------- 监控面板（结局二互动） ---------------- */
+
 const MON_STEPS_BASE = [
-  { btn: "📡 切换至3号通道摄像头", log: "画面切到CAM-07。你看见他找到了林母。她瘦了很多，认出了他——哪怕他站在阴影里。" },
-  { btn: "🔓 远程开启3号门电磁锁", log: "电磁锁释放的轻响在监控里被放大。门开了一条缝——一道手电的光柱扫了过来。" },
-  { btn: "🧭 指引撤离路线", log: "「左转，直走，月台右边的货柜后面——我看着你呢。」他回过头，望向摄像头。像在看你的眼睛。" },
+  { btn: "切换至3号通道摄像头", log: "画面切到CAM-07。你看见他找到了林母。她瘦了很多，认出了他——哪怕他站在阴影里。" },
+  { btn: "远程开启3号门电磁锁", log: "电磁锁释放的轻响在监控里被放大。门开了一条缝——一道手电的光柱扫了过来。" },
+  { btn: "指引撤离路线", log: "「左转，直走，月台右边的货柜后面——我看着你呢。」他回过头，望向摄像头。像在看你的眼睛。" },
 ];
 const MON_STEPS_POWER = [
-  { btn: "⚡ 切断配电室总闸（结构图提示）", log: "你按照老张手绘的结构图，找到了配电室的总闸位置。全仓电源瞬间切断——监控室的屏幕黑了，警报系统离线。黑暗里，只有他的呼吸声。" },
+  { btn: "切断配电室总闸（结构图提示）", log: "你按照老张手绘的结构图，找到了配电室的总闸位置。全仓电源瞬间切断——监控室的屏幕黑了，警报系统离线。黑暗里，只有他的呼吸声。" },
 ];
 function getMonSteps() {
   return has("obs_map") ? MON_STEPS_POWER.concat(MON_STEPS_BASE) : MON_STEPS_BASE;
@@ -3485,7 +3561,7 @@ function showMonitor() {
 function renderMonitor() {
   const m = S.monitor;
   const steps = getMonSteps();
-  // 有结构图时，第一步即「切断配电室总闸」：此后 CAM-02 / CAM-11 断电黑屏（powered=false）
+  
   const powered = !(has("obs_map") && m.step >= 1);
   const cams = [
     { id: "CAM-02", name: "东侧走廊", alive: powered },
@@ -3504,21 +3580,14 @@ function renderMonitor() {
     m.step >= steps.length ? "发现撤离目标 · 掩护中" : "空 · 无人",
     powered ? "供电正常" : "已断电 · 无信号",
   ];
+  const camLine = m.step >= 1 ? "信号已接入" : "信号已接入 · 等待操作";
   $("#monitor-inner").innerHTML = `
     <div class="mon-head">
       <span class="mon-live">● LIVE</span>
       <span class="mon-title">临港东郊 · 3号仓库 监控终端</span>
       <span class="mon-clock">2066-10-15 00:${String(47 + Math.floor(m.step / 2)).padStart(2, "0")} · 操作员：你</span>
     </div>
-    <div class="mon-grid">
-      ${cams.map((c, i) => `
-        <div class="mon-cam ${m.step === 0 && i === 1 ? "active" : ""} ${c.alive ? "" : "dead"}">
-          <div class="mc-label">${c.id} ${c.name}${c.alive ? "" : " · 信号切断"}</div>
-          <div class="mc-time">00:${String(47 + m.step).padStart(2, "0")}:${String(10 + i * 7).padStart(2, "0")}</div>
-          <div class="mc-scene"><span class="mc-shelf"><i></i><i></i><i></i></span><span class="mc-person ${personIn(i) ? "" : "hidden-p"}" style="${personIn(i) && i === 2 ? "left:30%" : ""}"></span></div>
-          <div class="mc-cap">${caps[i]}</div>
-        </div>`).join("")}
-    </div>
+    <div class="mon-note">${esc(camLine)} · ${m.step >= steps.length ? "信号丢失" : "4路信号正常"}</div>
     <div class="mon-bottom">
       <div class="mon-log" id="mon-log">${m.log.map(l => "› " + esc(l)).join("<br>")}</div>
       <div class="mon-actions">
@@ -3535,6 +3604,7 @@ function monStep(i) {
   m.log.push(s.log);
   m.step++;
   beep(520, .07, .05);
+  requestAnimationFrame(() => { const lg = $("#mon-log"); if (lg) lg.scrollTop = lg.scrollHeight; });
   if (m.step >= steps.length) {
     m.log.push("他们从月台的阴影里出去了。三秒后——");
     renderMonitor();
@@ -3550,13 +3620,13 @@ function monStep(i) {
   renderMonitor();
 }
 
-/* ---------------- 新闻插播（结局一过渡） ---------------- */
+
 const NB_COMMENTS = [
   { u: "青云路居民", t: "我们家楼下就有一对双胞胎……他们今年才16岁。我现在不知道该怎么面对他们。" },
   { u: "前·档案科员工", t: "每一个数字都该有良心。谢谢这位记者，替我们把这些说出来。" },
   { u: "匿名", t: "我弟弟编号CLC-2050-0333-B。他「深造」八年了。妈，他没坐过飞机。" },
   { u: "星大社会学教授", t: "如果这份档案为真，这不再是公共卫生政策，而是一场制度化的谋杀。" },
-  { u: "北辰_星辰", t: "记者哥/姐，报道里说我的爸妈被救出来了……他们真的安全了吗？求求你们告诉我。" },
+  { u: "北辰_星辰", t: "沈记者，报道里说我的爸妈被救出来了……他们真的安全了吗？求求你们告诉我。" },
 ];
 const NB_COMMENTS_EXTRA = [
   { u: "纪检委退休干部", t: "47万星元，5个孩子。这还只是一个评估科三年的账。上面的人呢？必须一查到底。" },
@@ -3618,7 +3688,7 @@ function showEnding(n) {
       <p>生命延续中心连夜拉闸封锁，政府宣布介入调查。特警在临港市东郊3号仓库的地下室里，救出了林北辰的父母和十七名即将被「转运」的「冗余体」。因为「证据不足」，小林B没有被当场处置——但他被列为「高度关注对象」，从此活在镜头之下。</p>
       ${bribeNote}${mapNote}
       <p>一周后，你收到小林A的邮件。他和父母团聚了，但他再没见过他的「弟弟」。政府说，小林B被「转移」了。邮件的末尾，他问：</p>
-      <p class="mono" style="border-left:3px solid var(--line);padding-left:12px;color:#9db2c6">「记者哥/姐，我弟弟……算是活下来了吗？」</p>
+      <p class="mono" style="border-left:3px solid var(--line);padding-left:12px;color:#9db2c6">「沈记者，我弟弟……算是活下来了吗？」</p>
       <p>你没能回答。因为你的桌上，正放着一张生命延续中心寄来的律师函——起诉你「泄露国家机密」。</p>`,
       quote: "「真相是有重量的。它压垮了一些人，也压在一些人的名字上，永不风化。」"
     },
@@ -3645,11 +3715,23 @@ function showEnding(n) {
       quote: "「这座城市又平稳地运行了一天。只是有些人，被平稳地运行过去了。」"
     },
   }[n];
+  let endingsCount = 0;
   try {
     const done = JSON.parse(localStorage.getItem("wig_endings") || "[]");
     if (!done.includes(n)) done.push(n);
     localStorage.setItem("wig_endings", JSON.stringify(done));
+    endingsCount = done.length;
   } catch (e) {}
+  const endBtn = document.querySelector("#ending-screen .btn[data-action='to-intro'], #ending-screen .btn[data-action='author-note']");
+  if (endBtn) {
+    if (endingsCount >= 3) {
+      endBtn.dataset.action = "author-note";
+      endBtn.textContent = "作者寄语";
+    } else {
+      endBtn.dataset.action = "to-intro";
+      endBtn.textContent = "回到简介";
+    }
+  }
   S.flags.game_over = true;
   renderObjectives();
   $("#ending-tag").textContent = E.tag;
@@ -3669,9 +3751,7 @@ function showEnding(n) {
   }
 }
 
-/* ================================================================
-   剧情推进
-   ================================================================ */
+
 function setFlag(f, v = true) {
   if (S.flags[f] === v) return;
   S.flags[f] = v;
@@ -3725,7 +3805,7 @@ function onFlag(f) {
         setFlag("ch3_started");
         S.flags.chat_unread = true;
         renderIcons();
-        chatPush("them", "记者哥/姐！！你在吗！！快回我！！", "加密用户BC");
+        chatPush("them", "沈记者！！你在吗！！快回我！！", "加密用户BC");
         setTimeout(() => chatPush("them", "我刚刚在窗外看到了他。他回来了！他就在楼下！！就在楼下啊！", "加密用户BC"), 900);
         setTimeout(() => chatPush("them", "他看起来……不太一样了。他瘦了，也高了。而且他好像知道所有的事情，他看我的眼神就像……就像在看一个占了他的位置的人。", "加密用户BC"), 1800);
         setTimeout(() => chatSys("「北辰」撤回了一条消息"), 2700);
@@ -3780,9 +3860,7 @@ function showChoice() {
     </div>`);
 }
 
-/* ================================================================
-   应用渲染
-   ================================================================ */
+
 function refreshApp(appId) {
   const body = document.querySelector(`[data-body="${appId}"]`);
   if (!body) return;
@@ -3799,19 +3877,42 @@ function refreshApp(appId) {
   else if (appId === "cms") body.innerHTML = cmsScreen();
   else if (appId === "log") body.innerHTML = logHtml();
   else if (appId === "obj") body.innerHTML = objectivesHtml();
+  else if (appId === "doc") body.innerHTML = docReaderHtml();
   if (st > 0) {
     const s2 = body.querySelector(".app-root") || body;
     requestAnimationFrame(() => { if (s2.isConnected) s2.scrollTop = st; });
   }
 }
 
+function docReaderHtml() {
+  return `<div class="app-root doc-reader">
+    <div class="doc-toolbar">
+      <span class="doc-file">📄 城中村拆迁手记_试读版.docx</span>
+      <span class="doc-tag">未刊稿 · 试读</span>
+    </div>
+    <div class="doc-page">
+      <div class="doc-title">城中村拆迁手记</div>
+      <div class="doc-sub">——槐树街片区最后的三百天</div>
+      <div class="doc-byline">沈砚 · 星都观察者（实习记者）</div>
+      <div class="doc-hr"></div>
+      <h4 class="doc-chapter">第一章 白纸黑字</h4>
+      <p>槐树街片区的拆迁公告，是2066年3月17日贴在老槐树下的。用的是最厚的铜版纸，盖着区城建局的公章，红得刺眼。</p>
+      <p>公告说，这里要建“星都数字经济产业园”。</p>
+      <p>从那天起，我在槐树街蹲了三个月。四十七户人家，我敲开了四十四扇门。剩下三扇，一扇上了锁，一扇住着不肯开门的老人，一扇的门缝里塞着法院的封条。</p>
+      <p>第一个愿意跟我说话的，是巷口修表的陈师傅。他把手表零件摊了一桌子，头也不抬地说：“记者同志，你知道一块表为什么会停吗？不是没上弦，是齿轮被人换了。”</p>
+      <p>补偿方案贴出来的那天晚上，居委会的喇叭响了一整夜。开发商的工作人员挨家挨户送“慰问品”——一桶油，一袋米，一张印着电话的卡片。卡片背面印着一行小字：签约享额外奖励，越早越划算。</p>
+      <p>我没敢告诉任何人，那家开发商的名字，我在三个月前的一份政府招标文件里见过。它同时出现在两个完全不相干的项目里。</p>
+      <div class="doc-end">（试读结束 · 全文未刊稿）</div>
+    </div>
+  </div>`;
+}
 function mailHtml() {
   const list = inbox.filter(m => {
     const f = (S.ui.mail.filter || "").trim();
     if (!f) return true;
     return (m.from + m.subject + m.body).includes(f);
   });
-  const sel = (list.find(m => m.id === S.ui.mail.sel && S.ui.mail.acctSel === "me")) || list[0];
+  const sel = list.find(m => m.id === S.ui.mail.sel && S.ui.mail.acctSel === "me");
   let readPane = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--dim)">选择一封邮件</div>`;
   if (sel) {
     const acts = (sel.actions || []).map(a => {
@@ -3873,9 +3974,7 @@ function renderBrowser() {
   return fn();
 }
 
-/* ================================================================
-   事件分发
-   ================================================================ */
+
 document.addEventListener("click", (e) => {
   const t = e.target.closest("[data-action]");
   if (!t) return;
@@ -3885,8 +3984,34 @@ document.addEventListener("click", (e) => {
       S.difficulty = (arg === "normal") ? "normal" : "easy";
       $("#intro-screen").classList.add("hidden");
       $("#hire-screen").classList.remove("hidden");
+      playHireChat();
       beep(660, .14, .06);
       setTimeout(() => beep(880, .2, .05, .12), 160);
+    },
+    "hire-accept": () => {
+      const bar = $("#hc-input-bar");
+      if (bar) bar.innerHTML = `<span class="hc-sent">✓ 已发送：明日赴约。</span>`;
+      setTimeout(() => {
+        const wrap = $("#hire-card-wrap");
+        if (wrap) wrap.classList.remove("hidden");
+        beep(740, .1, .05);
+      }, 1500);
+    },
+    "toggle-resume": () => {
+      const bar = $("#hc-resume-bar");
+      if (bar) bar.classList.toggle("folded");
+    },
+    "doc-read": () => {
+      const hire = $("#hire-screen");
+      if (!hire || hire.querySelector(".hc-doc-overlay")) return;
+      const ov = document.createElement("div");
+      ov.className = "hc-doc-overlay";
+      ov.innerHTML = `<div class="hc-doc-box">${docReaderHtml()}<button class="btn btn-sm hc-doc-close" data-action="doc-close">✕ 关闭试读</button></div>`;
+      hire.appendChild(ov);
+    },
+    "doc-close": () => {
+      const ov = document.querySelector("#hire-screen .hc-doc-overlay");
+      if (ov) ov.remove();
     },
     "hire-start": () => {
       $("#hire-screen").classList.add("hidden");
@@ -3914,8 +4039,9 @@ document.addEventListener("click", (e) => {
        "remote_granted","r_work","r_photo1","r_photo2","r_photo3","safe_opened","usbA_opened","video_watched","letter_read",
        "ch1_done","invite_known","forum_open","forum_read_top","forum_read_b2","forum_read_zhang",
        "dm_read","obs_unlocked","obs_diary","obs_bribe","obs_map","gov_hacked","gov_decrypted",
-       "backdoor_available","b_letter","li_played"].forEach(f => S.flags[f] = true);
+       "backdoor_available","b_letter","li_played","vp_ab"].forEach(f => S.flags[f] = true);
       S.ui.chat.msgs = []; S.ui.chat.initialized = false;
+      inbox.forEach(m => m.unread = false);
       renderIcons(); renderObjectives();
       toast("⚡ 快速重玩", "已解锁第五章：最后的抉择。这一次，你会选择哪条路？", "warn", null, 8000);
       setFlag("truth_known");
@@ -3942,6 +4068,24 @@ document.addEventListener("click", (e) => {
       if (S._peepAfter) { const q = S._peepAfter; S._peepAfter = null; q(); }
     },
     "restart": () => location.reload(),
+    "to-intro": () => {
+      $("#ending-screen").classList.add("hidden");
+      S.flags.game_over = false;
+      $("#intro-screen").classList.remove("hidden");
+      try {
+        const done = JSON.parse(localStorage.getItem("wig_endings") || "[]");
+        const bar = $("#quick-replay-bar");
+        if (bar && done.length) bar.classList.remove("hidden");
+      } catch (e) {}
+    },
+    "author-note": () => {
+      openModal(`<div class="pass-box" style="text-align:center;max-width:620px;width:94%">
+        <h3 style="justify-content:center">作者寄语</h3>
+        <div class="pass-hint" style="text-align:left;line-height:2;font-size:13.5px;max-height:64vh;overflow-y:auto;padding-right:6px">感谢你。<br><br>感谢你扮演沈砚。感谢你读完每一封邮件，翻过每一张照片的背面，在没有人告诉你要去哪的时候，还是把那些没有人愿意记住的名字，一个一个捡了起来。<br><br>这是我第一次做WIG游戏。如果有问题和建议，欢迎向我反馈。<br><br>在此之前，我只会写故事。我不知道什么叫状态机，不知道变量会打架，不知道一个按钮的位置能调一整个下午。写下第一版的时候，我甚至不确定它能不能跑起来。<br><br>但它跑起来了。<br><br>我必须诚实地说：这个游戏，是我和 AI 一起做出来的。剧本、世界观、那些藏在日志里的小字、那句“镜子不恨人，镜子只是记得”——是我写的。<br><br>但从第一行 console.log到最后一版调试，从状态机到时间压力条，从证据板的拖拽逻辑到三个结局的分支判定，AI 陪我走完了全程。它不知道我为什么执意要写林北辰，但它帮我把每一个 undefined 和每一处 null 都找了出来。<br><br>它是我第一个、也是唯一一个程序员同事。<br><br>有时候我觉得这件事有点奇妙：一个关于“复制体”和“备份”的故事，最终是被一个由无数文本训练出来的存在，帮我一砖一瓦砌完的。我不知道这算不算一种呼应。<br><br>但我知道，如果没有它，这个游戏可能还停在“我只会写故事”的阶段。如果没有我，那些代码也只是一个空壳，不会有人替林北辰多说一句话。是人决定了故事走向哪里，是 AI 让故事能够抵达你面前。<br><br>现在你已经通关三次。你知道那瓶水还是温的，你知道那面镜子里有第二个人影，你知道“海外深造”四个字底下压着多少名字。你可能比我更熟悉这些角色的呼吸。<br><br>这就是我做这个游戏想要的东西：不是让你猜对谜底，而是让你在心里，替他们多活了一遍。谢谢你替我做到了。谢谢你愿意在这个城市里，为一个十八岁的男孩停下来。<br><br>最后，谢谢你走完全部三个结局。<br><br>但是。请等一下。<br><br>当你合上这个故事的时候，有没有一个念头闪过——<br><br>那 001 到 099 号呢？<br><br>故事里只提到过一句话：母体是双子计划最初的那批备份体，编号 001 到 099，全部活过了 18 岁，却从来没有被处置。<br><br>他们是谁？<br><br>他们被关在哪里？<br><br>这六年里，他们看着身边的人一个一个被“送走”，他们又做了什么？<br><br>还有那个在暗涌论坛置顶了十年帖子、从来没有露过真面目的守夜人——他到底是一个人，还是一个组织，还是一种更古老的东西？<br><br>以及，那个在档案里被涂黑的 07 号。他到底是死了，还是只是被藏起来了？三个月后，沈砚会在一个深夜，收到一封没有发件人的邮件。邮件正文只有五个字：<br><br>「他还活着。07。」<br><br>——《星都双子2 · 双生之影》，敬请期待。<br><br>—— rwxws</div>
+        <div class="pass-buttons" style="justify-content:center">
+          <button class="btn" data-action="pass-cancel">知道了</button>
+        </div></div>`);
+    },
     "show-choice": () => showChoice(),
     "fb-interact": () => openModal(`<div class="pass-box" style="text-align:center">
       <h3 style="justify-content:center">💬 贴文互动</h3>
@@ -3951,17 +4095,13 @@ document.addEventListener("click", (e) => {
       </div></div>`),
     "play-v3": () => { const ev = evidences.find(x => x.id === "v3"); if (ev) playEvidence(ev); },
 
-    /* 邮件 */
+    
     "mail-select": () => {
       const m = inbox.find(x => x.id === arg);
       if (!m) return;
       m.unread = false;
       S.ui.mail.sel = arg; S.ui.mail.acctSel = "me";
       refreshApp("mail"); renderIcons();
-      if (m.id === "m_anon" && !has("cloud_opened")) {
-        toast("☁️ 星云网盘", "邮件下方附有网盘链接，点击「打开星云网盘链接」——需要北辰的生日作为密码。", "", () => openApp("cloud"));
-      }
-      if (m.id === "m_zhang_dm") setFlag("dm_read");
     },
     "open-cloud": () => { openApp("cloud"); },
     "open-mail-from-cms": () => { openApp("mail"); S.ui.mail.sel = "m_anon"; refreshApp("mail"); },
@@ -4033,7 +4173,7 @@ document.addEventListener("click", (e) => {
     },
 
 
-    /* 网盘 */
+    
     "cloud-unlock": () => {
       const v = ($("#cloud-pass").value || "").trim();
       if (v === "20481015") {
@@ -4051,7 +4191,7 @@ document.addEventListener("click", (e) => {
         <div class="mono" style="font-size:12.5px;line-height:2">拍摄日期：2048-06-01<br>设备：XINGDU-P20<br>GPS：北纬39°54′，东经116°23′<br>（尝试搜索这组坐标……）</div></div>`;
     },
 
-    /* 远程 */
+    
     "remote-view": () => {
       if (arg === "usbA") {
         if (has("usbA_opened")) { S.ui.remote.view = "usbA"; refreshApp("remote"); return; }
@@ -4075,7 +4215,7 @@ document.addEventListener("click", (e) => {
       S._passForceHint = "2049年3月12日——北辰第一次开口叫「妈妈」的日子 → 20490312";
       passwordModal({
         title: "林父的保险箱",
-        hint: `密码提示：「北辰第一次开口说话的日子。」<br>💡 可以在<b>加密频道</b>里问北辰本人。`,
+        hint: `密码提示：「北辰第一次开口说话的日子」。<br>💡 加密频道里，北辰告诉过你：2049年3月12日。`,
         placeholder: "8位数字（YYYYMMDD）",
         numeric: true,
         check: v => v === "20490312",
@@ -4088,8 +4228,7 @@ document.addEventListener("click", (e) => {
       setTimeout(() => { const lb = $("#letter-box"); if (lb) lb.innerHTML = letterHtml(); }, 50);
     },
 
-    /* 加密频道 */
-    "chat-ask-mama": () => chatAskMama(),
+    
     "chat-choice": () => {
       if (has("ch3_chose")) return;
       setFlag("ch3_chose");
@@ -4099,13 +4238,6 @@ document.addEventListener("click", (e) => {
         chatPush("me", "别开！锁好门，装作家里没人。隔着门也能谈。");
       }
       setTimeout(() => {
-        showPeephole(
-          arg === "open"
-            ? "北辰深吸一口气，拧开了门锁。少年没有进来——他站在门口的光影交界处，隔着门槛，把一个东西递了过来。你让北辰退后，透过猫眼看清他的脸——"
-            : "北辰照做了。脚步声在门外停了很久。你让他凑近猫眼——门外站着一个和他一模一样的少年。他没有敲门，也没有再发短信。",
-          "一个信封被塞进了门缝",
-          "他的眼神很冷。但转身离开前，嘴角有一丝几乎看不见的苦笑。",
-          () => {
             if (arg === "open") chatPush("them", "……他没进来。他只是把一个信封塞进北辰手里，然后转身走了。走之前他回头看了我一眼。那一眼，像看了我一辈子。", "加密用户BC");
             else chatPush("them", "……我没开门。他在门外站了很久，一句话没说，把一个信封塞进门缝就走了。", "加密用户BC");
             setTimeout(() => {
@@ -4129,8 +4261,6 @@ document.addEventListener("click", (e) => {
 ——你的弟弟，北辰B`);
               toast("✉️ 北辰B的信", "信里藏着进入母体档案库的钥匙——读完它。", "warn", () => openApp("chat"));
             }, 900);
-          }
-        );
       }, 1100);
     },
     "chat-letter-done": () => {
@@ -4138,7 +4268,7 @@ document.addEventListener("click", (e) => {
       setFlag("b_letter");
     },
 
-    /* 地图 / 拨号 */
+    
     "map-pin": () => {
       const pin = MAP_PINS.find(p => p.name === arg);
       const info = (pin || {}).info || "";
@@ -4167,14 +4297,13 @@ document.addEventListener("click", (e) => {
     },
     "map-city": () => { S.ui.map.view = "city"; refreshApp("map"); },
 
-    /* 天象观测站（主线） */
+    
     "obs-enter-from-map": () => {
       closeWin("map");
       S.ui.obs.view = "outside";
       S.ui.browser.page = "observatory";
       openApp("browser");
       refreshApp("browser");
-      toast("🔭 天象观测站", "铁门半掩着。你走了进去——大厅里有人住过的痕迹。", "");
     },
     "obs-enter-pc": () => {
       S.ui.obs.view = "pc";
@@ -4227,21 +4356,25 @@ document.addEventListener("click", (e) => {
       }
     },
 
-    /* 论坛 */
+    
+    "forum-enter": () => { closeModal(); S.ui.browser.page = "forum"; refreshApp("browser"); },
     "forum-gate": () => {
       const v = ($("#invite-input").value || "").trim();
       if (v === "2048") {
         setFlag("forum_open"); ding();
-        S.ui.browser.page = "forum";
-        refreshApp("browser");
-        toast("🌑 已进入「暗涌」", "水面上是他们的城市，水面下是我们的。留意私信。", "");
+        openModal(`<div class="pass-box" style="text-align:center">
+          <h3 style="justify-content:center">临时账号分配</h3>
+          <div class="pass-hint">「暗涌」不记录真实身份。系统为你分配临时代号：<br><b style="font-size:24px;color:#7fd6a0;letter-spacing:4px;font-family:var(--mono)">夜航者_2048</b><br><br>水面上是他们的城市，水面下是我们的。</div>
+          <div class="pass-buttons" style="justify-content:center">
+            <button class="btn btn-primary" data-action="forum-enter">进入「暗涌」</button>
+          </div></div>`);
       } else {
         beepErr(); const el = $("#forum-error");
         if (el) el.textContent = "邀请码无效。邀请码藏在「老地方」的一部老电话里。";
       }
     },
 
-    /* 浏览器 */
+    
     "do-search": () => {
       if (arg) { doSearch(arg); return; }
       const el = $("#search-input"); if (el) doSearch(el.value);
@@ -4262,7 +4395,7 @@ document.addEventListener("click", (e) => {
     "browser-refresh": () => { refreshApp("browser"); beep(600, .08, .03); toast("🔄 已刷新", "页面已重新加载。", "", null, 2000); },
     "clear-search-history": () => { S.searchHistory = []; refreshApp("browser"); },
 
-    /* ID系统 */
+    
     "id-mode": () => { S.ui.id.mode = arg; refreshApp("id"); },
     "id-login": () => {
       const u = $("#id-user").value.trim(), p = $("#id-pass").value.trim();
@@ -4300,7 +4433,7 @@ document.addEventListener("click", (e) => {
       setTimeout(() => { box.innerHTML = liTapeHtml(); setFlag("truth_known"); }, 2000);
     },
 
-    /* 语音 */
+    
     "voice-select": () => { S.ui.voice.sel = arg; refreshApp("voice"); },
     "voice-play": () => {
       S.ui.voice.sel = arg; refreshApp("voice");
@@ -4308,6 +4441,7 @@ document.addEventListener("click", (e) => {
       if (ev) playEvidence(ev);
     },
     "voice-stop": () => { stopVoiceAudio(); S.ui.voice.sel = null; refreshApp("voice"); },
+    "play-morse": () => { playVoiceAudio("assets/Morse code.wav"); toast("摩斯密码音频", "正在播放……对照星图旁的点划，翻译出四位数字。", "", null, 4000); },
     "vp-compare": () => {
       const a = $("#vp-a").value, b = $("#vp-b").value;
       S.ui.voice.vpA = a; S.ui.voice.vpB = b;
@@ -4347,7 +4481,7 @@ document.addEventListener("click", (e) => {
     },
     "nb-go": () => { $("#newsburst-screen").classList.add("hidden"); showEnding(1); },
 
-    /* 选择 */
+    
     "choose-1": () => {
       closeModal(); setFlag("choice_route1"); openApp("cms");
       S.ui.cms.tab = "editor"; refreshApp("cms");
@@ -4375,7 +4509,7 @@ document.addEventListener("click", (e) => {
     },
     "mon-step": () => monStep(parseInt(arg, 10)),
 
-    /* 通用 */
+    
     "pass-try": () => tryPassword(),
     "pass-cancel": () => closeModal(),
   };
@@ -4386,7 +4520,7 @@ function checkPrologue() {
   if (prologueDone()) setFlag("prologue_done");
 }
 
-/* 回车提交 */
+
 document.addEventListener("keydown", (e) => {
   if (e.key !== "Enter") return;
   const t = e.target;
@@ -4401,23 +4535,21 @@ document.addEventListener("keydown", (e) => {
   else if (t.id === "arch-query") document.querySelector('[data-action="arch-query"]')?.click();
   else if (t.id === "mail-filter") mailFilter(t.value);
 });
-/* 邮件搜索：即时过滤 */
+
 document.addEventListener("input", (e) => {
   if (e.target && e.target.id === "mail-filter") mailFilter(e.target.value);
 });
-/* 点击开始菜单以外关闭 */
+
 document.addEventListener("mousedown", (e) => {
   const sm = $("#start-menu");
   if (sm && !sm.classList.contains("hidden") && !e.target.closest("#start-menu") && !e.target.closest('[data-action="open-start"]')) {
     sm.classList.add("hidden");
   }
 });
-/* 点击模态层空白关闭 */
+
 $("#modal-layer").addEventListener("mousedown", (e) => { if (e.target.id === "modal-layer") closeModal(); });
 
-/* ================================================================
-   系统监控 · 日志（氛围窗，可忽略）
-   ================================================================ */
+
 const LOG_POOL = [
   ["mailsvc", "邮件服务连接失败，正在重试 (3/5)", "err"],
   ["content-filter", "舆情安全策略已更新（版本 2066.10.14-3）", ""],
@@ -4463,7 +4595,7 @@ setInterval(() => {
   body.scrollTop = body.scrollHeight + 200;
 }, 2400);
 
-/* ---------------- 闲置提示 ---------------- */
+
 let lastActive = Date.now();
 ["mousedown", "keydown"].forEach(ev => document.addEventListener(ev, () => { lastActive = Date.now(); }, true));
 setInterval(() => {
@@ -4486,9 +4618,7 @@ setInterval(() => {
 }, 8000);
 
 
-/* ================================================================
-   开机
-   ================================================================ */
+
 function runBoot(onDone) {
   const msgs = ["正在建立加密连接…", "验证设备指纹…", "载入居民信用档案…", "同步舆情安全策略…", "欢迎回来。"];
   let i = 0;
@@ -4509,13 +4639,13 @@ function runBoot(onDone) {
   }, 550);
 }
 function boot() {
-  // 已互换：开机先显示难度选择/介绍，选完再播 OS2066 启动动画
+  
   $("#boot-screen").classList.add("hidden");
   $("#intro-screen").classList.remove("hidden");
 }
 boot();
 
-/* 通关后解锁「快速重玩」：加载时检查本地通关记录 */
+
 (function checkQuickReplay() {
   try {
     const done = JSON.parse(localStorage.getItem("wig_endings") || "[]");

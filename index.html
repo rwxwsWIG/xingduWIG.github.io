@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>星都OS 2066 — 《代号：双子》</title>
+<title>星都OS 2066 — 《星都双子》</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<!-- ============ 开机画面 ============ -->
+
 <div id="boot-screen" class="fullscreen-layer">
   <div class="boot-inner">
     <div class="boot-logo"><img src="assets/os_logo.png" alt="星都OS"></div>
@@ -19,11 +19,11 @@
   </div>
 </div>
 
-<!-- ============ 序章叙事 ============ -->
+
 <div id="intro-screen" class="fullscreen-layer hidden">
   <div class="intro-card">
     <div class="intro-tag">网页互动游戏 · WIG</div>
-    <h2>代号：双子</h2>
+    <h2>星都双子</h2>
     <p class="intro-meta">类型：悬疑 / 科幻 / 反乌托邦 &nbsp;|&nbsp; 时间：2066年 &nbsp;|&nbsp; 地点：星都市</p>
     <div class="intro-body">
       <p>2066年10月，星都市的秋天。你是一位刚毕业的新闻系学生，在独立网络媒体《星都观察者》实习。你的第一篇报道任务本是采访"星都智慧城市"的便民措施——</p>
@@ -52,28 +52,62 @@
   </div>
 </div>
 
-<!-- ============ 应聘通过 · 入职剧情（开启星都OS前） ============ -->
+
 <div id="hire-screen" class="fullscreen-layer hidden">
-  <div class="hire-card">
-    <div class="hire-tag">星都观察者 · 编辑部</div>
-    <h2>录用通知</h2>
-    <p class="hire-meta">实习记者岗位 · 入职编号 XD-1024 · 2066-10-12</p>
-    <div class="hire-body">
-      <p>投出去的简历在第十七个夜晚有了回音——不是自动回复，是<b>陈姐</b>亲自发来的录用通知：</p>
-      <div class="hire-quote">「你的笔头够快，胆子够大。明天九点，来编辑部报到。」</div>
-      <p>三轮面试，五个竞争者，最后只剩你一个人站在主编办公室。陈姐只问了你一个问题：</p>
-      <div class="hire-qa">
-        <span class="hq-q">「如果给你一台电脑，你能查到什么？」</span>
-        <span class="hq-a">「真相。」</span>
+  <div class="hire-chat" id="hire-chat">
+    <div class="hc-head">
+      <span class="hc-back">‹</span>
+      <div class="hc-avatar hc-boss">陈</div>
+      <div class="hc-info">
+        <div class="hc-name">陈姐 <span class="hc-tag">主编</span></div>
+        <div class="hc-org">星都观察者 · <span class="hc-read">● 已读</span> · 2066-10-11 10:01</div>
       </div>
-      <p>他们需要一个能操作政务云的实习生——你的星都OS 2066 账号与工牌，会在入职当天发放。</p>
     </div>
-    <button class="btn btn-primary btn-lg" data-action="hire-start"> 确认入职 · 开启星都OS</button>
-    <div class="hire-note">入职后你将获得星都OS 2066 政务云账号 · </div>
+    
+    <div class="hc-resume-bar" id="hc-resume-bar">
+      <div class="hrb-head" data-action="toggle-resume">
+        <span>📄 你的简历 · <b class="hrb-name">沈砚</b></span>
+        <span class="hrb-fold">▾</span>
+      </div>
+      <div class="hrb-body">
+        <div class="hr-row"><span>姓名</span><b>沈砚</b></div>
+        <div class="hr-row"><span>学历</span><b>星都传媒大学 · 新闻系 2066届</b></div>
+        <div class="hr-row"><span>实习经历</span><b>星都电视都市频道新闻部（被裁）</b></div>
+        <div class="hr-row"><span>代表作</span><b>《城中村拆迁手记》· 未刊稿 <span class="hrb-link" data-action="doc-read">试读</span></b></div>
+        <div class="hr-row"><span>技能</span><b>深访 / 数据整理 / 基础反侦察</b></div>
+        <div class="hr-row"><span>期望薪资</span><b>面议</b></div>
+      </div>
+    </div>
+    <div class="hc-messages" id="hc-messages"></div>
+    <div class="hc-input">
+      <div class="hc-input-bar" id="hc-input-bar"><span class="hc-input-text" id="hc-input-text">...</span></div>
+      <div class="hc-action" id="hc-action"></div>
+    </div>
+  </div>
+
+  
+  <div class="hire-card-wrap hidden" id="hire-card-wrap">
+    <div class="hire-card">
+      <div class="hire-tag">星都观察者 · 编辑部</div>
+      <h2>录用通知</h2>
+      <p class="hire-meta">实习记者岗位 · 入职编号 XD-1024 · 2066-10-12</p>
+      <div class="hire-body">
+        <p>投出去的简历在第十七个夜晚有了回音——不是自动回复，是<b>陈姐</b>亲自发来的录用通知：</p>
+        <div class="hire-quote">「你的笔头够快，胆子够大。明天九点，来编辑部报到。」</div>
+        <p>三轮面试，五个竞争者，最后只剩你一个人站在主编办公室。陈姐只问了你一个问题：</p>
+        <div class="hire-qa">
+          <span class="hq-q">「如果给你一台电脑，你能查到什么？」</span>
+          <span class="hq-a">「真相。」</span>
+        </div>
+        <p>他们需要一个能操作政务云的实习生——你的星都OS 2066 账号与工牌，会在入职当天发放。</p>
+      </div>
+      <button class="btn btn-primary btn-lg" data-action="hire-start"> 确认入职 · 开启星都OS</button>
+      <div class="hire-note">入职后你将获得星都OS 2066 政务云账号 · 你的第一篇报道任务已经派发</div>
+    </div>
   </div>
 </div>
 
-<!-- ============ 桌面 ============ -->
+
 <div id="desktop" class="hidden">
   <div class="desktop-wallpaper">
     <div class="wall-city"></div>
@@ -86,10 +120,10 @@
 
   <div id="icon-area"></div>
 
-  <!-- 任务目标面板（右侧竖排，可收起） -->
+  
   <div id="objective-panel" data-action="open-objectives">
     <div class="op-head">
-      <span class="op-title">◎ 任务目标</span>
+      <span class="op-title">任务目标</span>
       <span class="op-arrow">线索 ›</span>
       <span class="op-collapse" data-action="toggle-objective" title="收起 / 展开">‹</span>
     </div>
@@ -97,7 +131,7 @@
     <ul class="op-list" id="objective-list"></ul>
   </div>
 
-  <!-- 任务栏 -->
+  
   <div id="taskbar">
     <div class="tb-start" data-action="open-start">✦ 开始</div>
     <div class="tb-divider"></div>
@@ -107,32 +141,32 @@
     </div>
   </div>
 
-  <!-- 开始菜单 -->
+  
   <div id="start-menu" class="hidden">
-    <div class="sm-header">星都 OS · 用户：实习记者</div>
+    <div class="sm-header">星都 OS · 用户：沈砚（实习记者）</div>
     <div id="sm-app-list"></div>
   </div>
 
-  <!-- 窗口容器 -->
+  
   <div id="window-layer"></div>
 </div>
 
-<!-- ============ 通用模态 ============ -->
+
 <div id="modal-layer" class="hidden">
   <div id="modal-box"></div>
 </div>
 
-<!-- ============ 监控面板（结局二） ============ -->
+
 <div id="monitor-screen" class="fullscreen-layer hidden">
   <div class="monitor-inner" id="monitor-inner"></div>
 </div>
 
-<!-- ============ 新闻插播（结局一过渡） ============ -->
+
 <div id="newsburst-screen" class="fullscreen-layer hidden">
   <div class="newsburst-inner" id="newsburst-inner"></div>
 </div>
 
-<!-- ============ 猫眼视角 ============ -->
+
 <div id="peephole-screen" class="fullscreen-layer hidden">
   <div class="peep-desc" id="peep-desc"></div>
   <div class="peep-caption" id="peep-caption">门外站着一个和你一模一样的少年。他的眼神，很冷。</div>
@@ -140,18 +174,19 @@
   <button class="btn btn-primary" data-action="close-peephole">放下猫眼</button>
 </div>
 
-<!-- ============ 结局画面 ============ -->
+
 <div id="ending-screen" class="fullscreen-layer hidden">
   <div class="ending-inner">
     <div class="ending-tag" id="ending-tag">结局达成</div>
     <h2 id="ending-title"></h2>
     <div class="ending-body" id="ending-body"></div>
     <div class="ending-quote" id="ending-quote"></div>
-    <button class="btn btn-primary btn-lg" data-action="restart">重新开始</button>
+    <button class="btn btn-primary btn-lg" id="ending-main-btn" data-action="to-intro">回到简介</button>
+    <div class="ending-tip">回到简介可快速体验其他结局</div>
   </div>
 </div>
 
-<!-- ============ 提示气泡 ============ -->
+
 <div id="toast-area"></div>
 
 <script src="game.js"></script>
