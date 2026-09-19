@@ -55,7 +55,7 @@ const beepGunshot = () => { beep(90, .35, .3); beep(60, .5, .25, .05); };
 function toast(title, body, kind = "", onClick = null, ms = 8000) {
   const el = document.createElement("div");
   el.className = "toast " + kind;
-  el.innerHTML = `<div class="t-title"><span>${esc(title)}</span></div><div class="t-body">${body}</div><button class="t-close" aria-label="关闭通知">✕</button>`;
+  el.innerHTML = `<div class="t-title"><span>${toastGlyph(title)}</span></div><div class="t-body">${body}</div><button class="t-close" aria-label="关闭通知">✕</button>`;
   const dismiss = () => { el.classList.add("out"); setTimeout(() => el.remove(), 320); };
   el.onclick = () => { if (onClick) onClick(); dismiss(); };
   el.querySelector(".t-close").addEventListener("click", (e) => { e.stopPropagation(); dismiss(); });
@@ -354,6 +354,220 @@ const ICON_SVG = {
   remote: `<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M9 20h6M12 16v4"/></svg>`,
   chat: `<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9l-5 4V6a1 1 0 0 1 1-1z"/><path d="M8 10h8M8 13h5"/></svg>`
 };
+
+
+
+const SVG_LIB = {
+  "search": "<circle cx=\"11\" cy=\"11\" r=\"6.5\"/><path d=\"M20 20l-4.2-4.2\"/>",
+  "folder": "<path d=\"M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\"/>",
+  "file": "<path d=\"M7 3h7l4 4v14H7z\"/><path d=\"M14 3v4h4\"/><path d=\"M10 12h6M10 16h6\"/>",
+  "photo": "<rect x=\"3\" y=\"5\" width=\"18\" height=\"14\" rx=\"2\"/><circle cx=\"9\" cy=\"10\" r=\"1.6\"/><path d=\"M4 18l5-5 4 4 3-3 4 4\"/>",
+  "note": "<path d=\"M5 4h11l3 3v13H5z\"/><path d=\"M16 4v3h3\"/><path d=\"M8 12h8M8 16h6\"/>",
+  "table": "<rect x=\"4\" y=\"4\" width=\"16\" height=\"16\" rx=\"1.5\"/><path d=\"M4 10h16M10 4v16\"/>",
+  "chat": "<path d=\"M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9l-5 4V6a1 1 0 0 1 1-1z\"/><path d=\"M8 10h8M8 13h5\"/>",
+  "lock": "<rect x=\"5\" y=\"11\" width=\"14\" height=\"9\" rx=\"2\"/><path d=\"M8 11V8a4 4 0 0 1 8 0v3\"/><circle cx=\"12\" cy=\"15.5\" r=\"1.3\"/>",
+  "unlock": "<rect x=\"5\" y=\"11\" width=\"14\" height=\"9\" rx=\"2\"/><path d=\"M8 11V8a4 4 0 0 1 7.8-1.2\"/><circle cx=\"12\" cy=\"15.5\" r=\"1.3\"/>",
+  "key": "<circle cx=\"8\" cy=\"8\" r=\"4.5\"/><path d=\"M11.5 11.5L20 20M15 15l2.5-2.5\"/>",
+  "cash": "<circle cx=\"12\" cy=\"12\" r=\"8.5\"/><path d=\"M9.5 9.5c0-1.1 1.1-1.5 2.5-1.5s2.5.4 2.5 1.5-1 1.3-2.5 1.5-2.5.5-2.5 1.5 1 1.5 2.5 1.5 2.5-.4 2.5-1.5\"/>",
+  "usb": "<rect x=\"8\" y=\"3\" width=\"8\" height=\"6\" rx=\"1.5\"/><path d=\"M6 9h12v11a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1z\"/>",
+  "recycle": "<path d=\"M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13\"/><path d=\"M10 11v6M14 11v6\"/>",
+  "alert": "<path d=\"M12 3L2.5 20h19z\"/><path d=\"M12 10v4M12 16.5v.1\"/>",
+  "info": "<circle cx=\"12\" cy=\"12\" r=\"8.5\"/><path d=\"M12 11v5M12 7.5v.1\"/>",
+  "danger": "<circle cx=\"12\" cy=\"12\" r=\"8.5\"/><path d=\"M12 8v5M12 16v.1\"/>",
+  "check": "<path d=\"M5 12l5 5 9-10\"/>",
+  "pin": "<path d=\"M12 21s-7-5.5-7-11a7 7 0 0 1 14 0c0 5.5-7 11-7 11z\"/><circle cx=\"12\" cy=\"10\" r=\"2.5\"/>",
+  "star": "<path d=\"M12 3l2.6 5.6 6.4.7-4.7 4.2 1.3 6-5.6-3.3-5.6 3.3 1.3-6L3 9.3l6.4-.7z\"/>",
+  "fire": "<path d=\"M12 3c1 4-4 5-4 10a4 4 0 0 0 8 0c0-2-1-3-1-3s2 1 2 3a6 6 0 0 1-12 0c0-5 7-7 7-10z\"/>",
+  "user": "<circle cx=\"12\" cy=\"8\" r=\"3.5\"/><path d=\"M5 20c1-3.5 3.5-5 7-5s6 1.5 7 5\"/>",
+  "heart": "<path d=\"M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z\"/>",
+  "child": "<circle cx=\"12\" cy=\"9\" r=\"3.5\"/><path d=\"M5.5 20c1-4 3.5-6 6.5-6s5.5 2 6.5 6\"/>",
+  "school": "<path d=\"M3 10l9-5 9 5-9 5z\"/><path d=\"M6 12v5c0 1 2.5 3 6 3s6-2 6-3v-5\"/>",
+  "plane": "<path d=\"M3 11l18-7-7 18-2-8z\"/>",
+  "gene": "<path d=\"M8 4c4 0 8 2 8 8s-4 8-8 8M16 4c-4 0-8 2-8 8s4 8 8 8\"/><circle cx=\"12\" cy=\"12\" r=\"1.2\"/>",
+  "lab": "<path d=\"M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.8 3h10.4A2 2 0 0 0 19 18l-5-9V3\"/><path d=\"M8 15h8\"/>",
+  "hospital": "<rect x=\"5\" y=\"3\" width=\"14\" height=\"18\" rx=\"2\"/><path d=\"M12 8v6M9 11h6\"/>",
+  "globe": "<circle cx=\"12\" cy=\"12\" r=\"8.5\"/><path d=\"M3.5 12h17M12 3.5c2.5 2.3 3.8 5 3.8 8.5s-1.3 6.2-3.8 8.5c-2.5-2.3-3.8-5-3.8-8.5s1.3-6.2 3.8-8.5z\"/>",
+  "phone": "<path d=\"M6 3h4l1.5 5-2.5 2a12 12 0 0 0 5 5l2-2.5 5 1.5v4a2 2 0 0 1-2 2A16 16 0 0 1 4 5a2 2 0 0 1 2-2z\"/>",
+  "camera": "<rect x=\"3\" y=\"7\" width=\"18\" height=\"13\" rx=\"2\"/><path d=\"M8 7l1.5-3h5L16 7\"/><circle cx=\"12\" cy=\"13.5\" r=\"3.5\"/>",
+  "video": "<rect x=\"3\" y=\"6\" width=\"13\" height=\"12\" rx=\"2\"/><path d=\"M16 11l5-3v8l-5-3z\"/>",
+  "calendar": "<rect x=\"4\" y=\"5\" width=\"16\" height=\"16\" rx=\"2\"/><path d=\"M4 9h16M8 3v4M16 3v4\"/>",
+  "trophy": "<path d=\"M8 4h8v5a4 4 0 0 1-8 0z\"/><path d=\"M8 5H4v2a4 4 0 0 0 5 4M16 5h4v2a4 4 0 0 1-5 4M12 13v5M9 21h6M10 18h4\"/>",
+  "shield": "<path d=\"M12 3l7 3v6c0 4.5-3 8-7 9-4-1-7-4.5-7-9V6z\"/>",
+  "eye": "<path d=\"M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z\"/><circle cx=\"12\" cy=\"12\" r=\"2.5\"/>",
+  "fish": "<path d=\"M3 12c4-3 9-4.5 14-4.5l4 4.5-4 4.5c-5 0-10-1.5-14-4.5z\"/><circle cx=\"17.5\" cy=\"12\" r=\".6\"/>",
+  "moon": "<path d=\"M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z\"/>",
+  "candle": "<path d=\"M12 4l1.5 2h-3z\"/><rect x=\"9\" y=\"6\" width=\"6\" height=\"10\" rx=\"2\"/><path d=\"M9 16h6l-1 5h-4z\"/><path d=\"M12 9v3\"/>",
+  "ship": "<path d=\"M3 13h18l-3-6H6z\"/><path d=\"M4 17l1 4h14l1-4\"/><path d=\"M12 7V3\"/>",
+  "wave": "<path d=\"M3 10c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2M3 15c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2\"/>",
+  "home": "<path d=\"M4 11l8-7 8 7\"/><path d=\"M6 10v10h12V10\"/>",
+  "factory": "<path d=\"M3 21h18M4 21V10l5 4V10l5 4V7h6v14\"/>",
+  "snow": "<path d=\"M12 3v18M5 6.5l14 11M19 6.5l-14 11\"/>",
+  "brain": "<path d=\"M12 4s6 6 6 10a6 6 0 0 1-12 0c0-4 6-10 6-10z\"/>",
+  "book": "<path d=\"M5 4h11a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2z\"/><path d=\"M7 4v14\"/>",
+  "paw": "<circle cx=\"8\" cy=\"9\" r=\"1.8\"/><circle cx=\"12\" cy=\"6.5\" r=\"1.8\"/><circle cx=\"16\" cy=\"9\" r=\"1.8\"/><path d=\"M7 11c0 2 2 3.5 5 3.5s5-1.5 5-3.5c0-1 .8-2 2-2M12 14.5V19\"/>",
+  "pen": "<path d=\"M4 20l1-4L16 5l3 3L8 19z\"/><path d=\"M14 7l3 3\"/>",
+  "send": "<path d=\"M12 16V5M7 10l5-5 5 5\"/><path d=\"M4 19h16\"/>",
+  "clipboard": "<rect x=\"6\" y=\"4\" width=\"12\" height=\"17\" rx=\"2\"/><path d=\"M9 4a3 3 0 0 1 6 0\"/><path d=\"M9 10h6M9 14h6\"/>",
+  "backdoor": "<circle cx=\"12\" cy=\"12\" r=\"7\"/><path d=\"M12 8v4l3 2\"/>",
+  "flashlight": "<rect x=\"9\" y=\"3\" width=\"6\" height=\"7\" rx=\"1.5\"/><path d=\"M10 10l-1 11h6l-1-11\"/><path d=\"M10.5 14h3\"/>",
+  "satellite": "<circle cx=\"12\" cy=\"12\" r=\"3\"/><path d=\"M12 9L9 6M12 15l4 4M12 9v-4M12 15v5M9 12H4M15 12h5\"/>",
+  "tools": "<path d=\"M14 4l6 6-3 3-6-6z\"/><path d=\"M11 7l-7 7 3 3 7-7\"/>",
+  "refresh": "<path d=\"M20 12a8 8 0 1 1-2.3-5.6M20 3v5h-5\"/>",
+  "bolt": "<path d=\"M13 3L5 13h6l-1 8 8-10h-6z\"/>",
+  "web": "<circle cx=\"12\" cy=\"12\" r=\"8.5\"/><path d=\"M3.5 12h17M12 3.5c2.5 2.3 3.8 5 3.8 8.5s-1.3 6.2-3.8 8.5\"/>",
+  "close": "<path d=\"M6 6l12 12M18 6L6 18\"/>",
+  "report": "<path d=\"M4 5h13a1 1 0 0 1 1 1v13H5a1 1 0 0 1-1-1V5z\"/><path d=\"M8 9h6M8 12h6M8 15.5h4\"/>",
+  "mic": "<rect x=\"9\" y=\"3\" width=\"6\" height=\"11\" rx=\"3\"/><path d=\"M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6\"/>",
+  "mute": "<path d=\"M12 4l-4 4H5v8h3l4 4z\"/><path d=\"M17 10l4 4M21 10l-4 4\"/>",
+  "scale": "<path d=\"M12 4v16M8 20h8M6 6h12M6 6l-2 5a3 3 0 0 0 6 0zM18 6l2 5a3 3 0 0 1-6 0z\"/>",
+  "target": "<circle cx=\"12\" cy=\"12\" r=\"8\"/><circle cx=\"12\" cy=\"12\" r=\"3\"/>",
+  "game": "<rect x=\"3\" y=\"7\" width=\"18\" height=\"10\" rx=\"2\"/><path d=\"M7 10v4M5 12h4M15 11h.1M18 13h.1\"/>",
+  "clock": "<circle cx=\"12\" cy=\"12\" r=\"8.5\"/><path d=\"M12 7.5V12l3 2\"/>",
+  "building": "<rect x=\"5\" y=\"4\" width=\"14\" height=\"17\" rx=\"1.5\"/><path d=\"M9 8h6M9 12h6M9 16h6\"/>",
+  "spark": "<path d=\"M12 3a5.5 5.5 0 0 0-3 10c.6.6 1 1.3 1 2h4c0-.7.4-1.4 1-2a5.5 5.5 0 0 0-3-10z\"/><path d=\"M9 18h6M10 21h4\"/>",
+  "atom": "<circle cx=\"12\" cy=\"12\" r=\"2\"/><ellipse cx=\"12\" cy=\"12\" rx=\"9\" ry=\"4\"/><ellipse cx=\"12\" cy=\"12\" rx=\"9\" ry=\"4\" transform=\"rotate(60 12 12)\"/><ellipse cx=\"12\" cy=\"12\" rx=\"9\" ry=\"4\" transform=\"rotate(120 12 12)\"/>",
+  "dish": "<path d=\"M3 13h18a9 9 0 0 1-18 0z\"/><path d=\"M7 13a5 5 0 0 1 10 0M12 13v-4\"/>",
+  "id": "<rect x=\"3\" y=\"5\" width=\"18\" height=\"14\" rx=\"2.5\"/><circle cx=\"9\" cy=\"10.5\" r=\"1.8\"/><path d=\"M5.5 16c.6-1.8 1.9-2.5 3.5-2.5s2.9.7 3.5 2.5M15 9.5h4M15 13h4\"/>",
+  "map": "<path d=\"M9 4L4 6v14l5-2 6 2 5-2V4l-5 2-6-2z\"/><path d=\"M9 4v14M15 6v14\"/>",
+  "cloud": "<path d=\"M7.5 18a4.2 4.2 0 0 1-.5-8.4 5.5 5.5 0 0 1 10.7-1.4A4.5 4.5 0 0 1 17.5 18h-10z\"/>",
+  "monitor": "<rect x=\"3\" y=\"4\" width=\"18\" height=\"12\" rx=\"1.5\"/><path d=\"M9 20h6M12 16v4\"/>",
+  "letter": "<rect x=\"3\" y=\"5\" width=\"18\" height=\"14\" rx=\"2.5\"/><path d=\"M3.5 7l8.5 6 8.5-6\"/>",
+  "doc": "<path d=\"M7 3h7l4 4v14H7z\"/><path d=\"M14 3v4h4\"/><path d=\"M10 12h6M10 16h6\"/>",
+  "carousel": "<rect x=\"3\" y=\"6\" width=\"18\" height=\"12\" rx=\"3\"/><path d=\"M8 6v12M16 6v12\"/><path d=\"M3 10h18\"/>",
+  "mirror": "<rect x=\"5\" y=\"3\" width=\"14\" height=\"18\" rx=\"2\"/><path d=\"M9 4h6M8 9c1-1.5 7-1.5 8 0\"/>",
+  "person": "<circle cx=\"12\" cy=\"8\" r=\"3.5\"/><path d=\"M5 20c1-3.5 3.5-5 7-5s6 1.5 7 5\"/>",
+  "flag": "<path d=\"M6 21V4M6 5h11l-2 3 2 3H6\"/>",
+  "menu": "<path d=\"M4 7h16M4 12h16M4 17h16\"/>",
+  "bar": "<path d=\"M4 20V10M10 20V4M16 20v-7M21 20H3\"/>",
+  "mouse": "<rect x=\"8\" y=\"3\" width=\"8\" height=\"14\" rx=\"4\"/><path d=\"M12 3v5\"/>",
+};
+const GLYPH2ICON = {
+  "搜": "search",
+  "历": "calendar",
+  "警": "alert",
+  "学": "school",
+  "飞": "plane",
+  "幼": "child",
+  "星": "star",
+  "单": "clipboard",
+  "球": "globe",
+  "医": "hospital",
+  "因": "gene",
+  "研": "lab",
+  "培": "lab",
+  "记": "note",
+  "童": "child",
+  "止": "close",
+  "友": "user",
+  "城": "building",
+  "目": "eye",
+  "热": "fire",
+  "厂": "factory",
+  "位": "pin",
+  "雪": "snow",
+  "脑": "brain",
+  "表": "table",
+  "冠": "trophy",
+  "书": "book",
+  "月": "moon",
+  "男": "person",
+  "烛": "candle",
+  "钉": "tools",
+  "船": "ship",
+  "匿": "eye",
+  "眼": "eye",
+  "鱼": "fish",
+  "水": "wave",
+  "浪": "wave",
+  "父": "person",
+  "屋": "home",
+  "讯": "chat",
+  "犬": "paw",
+  "猫": "paw",
+  "爱": "heart",
+  "工": "tools",
+  "护": "shield",
+  "标": "pin",
+  "夹": "folder",
+  "云": "cloud",
+  "悬": "mouse",
+  "传": "send",
+  "图": "photo",
+  "马": "carousel",
+  "镜": "mirror",
+  "币": "cash",
+  "盘": "usb",
+  "钥": "key",
+  "开": "unlock",
+  "文": "file",
+  "邮": "letter",
+  "笔": "pen",
+  "锁": "lock",
+  "闻": "report",
+  "音": "mic", "声": "mic",
+  "静": "mute",
+  "决": "scale",
+  "提": "spark",
+  "话": "phone",
+  "影": "video",
+  "望": "satellite",
+  "网": "web",
+  "屏": "monitor",
+  "暗": "moon",
+  "游": "game",
+  "速": "bolt",
+  "维": "tools",
+  "刷": "refresh",
+  "洞": "backdoor",
+  "照": "flashlight",
+  "密": "lock",
+  "回": "recycle",
+  "删": "close",
+  "简": "file",
+  "科": "atom",
+  "食": "dish",
+  "宠": "paw",
+  "寻": "search",
+  "百": "book",
+  "生": "spark",
+  "卫": "satellite",
+  "◎": "target",
+  "✓": "check",
+};
+const LOGO2ICON = {
+  "卫": "hospital",
+  "生": "spark",
+  "医": "hospital",
+  "因": "gene",
+  "百": "book",
+  "图": "map",
+  "食": "dish",
+  "宠": "paw",
+  "寻": "search",
+  "科": "atom",
+  "ID": "id",
+  "星": "star",
+  "观": "eye",
+};
+function svgIcon(name, color) {
+  const body = SVG_LIB[name] || "";
+  if (!body) return "";
+  const st = color ? ' stroke="' + color + '"' : ' stroke="currentColor"';
+  return '<svg viewBox="0 0 24 24" fill="none"' + st + ' stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;display:inline-block;vertical-align:-0.16em" aria-hidden="true">' + body + '</svg>';
+}
+function gic(g) {
+  const n = GLYPH2ICON[g];
+  if (n && SVG_LIB[n]) return svgIcon(n);
+  return g;
+}
+function toastGlyph(title) {
+  const m = /^([\u4e00-\u9fa5◎])\s+/.exec(title);
+  if (m && GLYPH2ICON[m[1]] && SVG_LIB[GLYPH2ICON[m[1]]]) {
+    return '<span class="t-ic">' + svgIcon(GLYPH2ICON[m[1]]) + '</span>' + esc(title.slice(m[0].length));
+  }
+  return esc(title);
+}
+
 function iconSVG(id) { return ICON_SVG[id] || ""; }
 function miniIcon(id) {
   const c = ICON_COLORS[id] || "#5aa9e6";
@@ -1008,6 +1222,13 @@ function faviconFor(url) {
 
 
 
+
+function logoGlyph(t) {
+  const n = LOGO2ICON[t];
+  if (n && SVG_LIB[n]) return svgIcon(n);
+  return t || "";
+}
+
 function msNav(opts) {
   const { brand, sub, logoText, logoColor, links = [], active = "", showSearch = true, navAction = "go-home" } = opts;
   const linksHtml = links.map(l => {
@@ -1019,7 +1240,7 @@ function msNav(opts) {
   }).join("");
   return `<div class="ms-nav">
     <div class="ms-nav-brand">
-      <div class="ms-nav-logo" style="background:${logoColor || "#1a73e8"}">${logoText || "★"}</div>
+      <div class="ms-nav-logo" style="background:${logoColor || "#1a73e8"}">${logoGlyph(logoText)}</div>
       <div>
         <div class="ms-nav-title">${brand}</div>
         ${sub ? `<div class="ms-nav-sub">${sub}</div>` : ""}
@@ -1027,7 +1248,7 @@ function msNav(opts) {
     </div>
     <div class="ms-nav-links">${linksHtml}</div>
     <div class="ms-nav-actions">
-      ${showSearch ? `<div class="ms-nav-search"><span>🔍</span><input placeholder="站内搜索" readonly></div>` : ""}
+      ${showSearch ? `<div class="ms-nav-search"><span>${svgIcon("search")}</span><input placeholder="站内搜索" readonly></div>` : ""}
       <button class="ms-nav-btn primary">登录</button>
     </div>
   </div>`;
@@ -1053,7 +1274,7 @@ function msHero(opts) {
 function msStats(stats) {
   return `<div class="ms-stats">${stats.map(s => `
     <div class="ms-stat ${s.trend || ""}">
-      <div class="ms-stat-icon">${s.icon || ""}</div>
+      <div class="ms-stat-icon">${gic(s.icon || "")}</div>
       <div class="ms-stat-num">${s.num}<span class="unit">${s.unit || ""}</span></div>
       <div class="ms-stat-label">${s.label}</div>
     </div>`).join("")}</div>`;
@@ -1063,7 +1284,7 @@ function msStats(stats) {
 function msCards(cards) {
   return `<div class="ms-cards">${cards.map(c => `
     <div class="ms-card" data-action="${c.act || "go-home"}" ${c.arg ? `data-arg="${c.arg}"` : ""}>
-      <div class="ms-card-icon ${c.iconColor || "blue"}">${c.icon || "文"}</div>
+      <div class="ms-card-icon ${c.iconColor || "blue"}">${gic(c.icon || "")}</div>
       <div class="ms-card-title">${c.title}</div>
       <div class="ms-card-desc">${c.desc || ""}</div>
       <div class="ms-card-arrow">了解更多 →</div>
@@ -1082,7 +1303,7 @@ function msSection(title, sub, content) {
 
 function msAlert(type, icon, text) {
   return `<div class="ms-alert ${type}">
-    <div class="ms-alert-icon">${icon}</div>
+    <div class="ms-alert-icon">${gic(icon)}</div>
     <div>${text}</div>
   </div>`;
 }
@@ -1130,14 +1351,14 @@ function obsNav(active = "深度调查") {
   return `<div class="obs-nav">
     <div class="obs-nav-inner">
       <div class="obs-brand">
-        <div class="obs-logo" style="font-size:22px">观</div>
+        <div class="obs-logo" style="font-size:22px">${svgIcon("eye")}</div>
         <div>
           <div class="obs-brand-name">星都观察者</div>
           <div class="obs-brand-sub">XINGDU OBSERVER · 独立调查媒体</div>
         </div>
       </div>
       <nav class="obs-links">${linksHtml}</nav>
-      <div class="obs-nav-search"><span>🔍</span><input placeholder="搜索报道" readonly></div>
+      <div class="obs-nav-search"><span>${svgIcon("search")}</span><input placeholder="搜索报道" readonly></div>
     </div>
     <div class="obs-accent"></div>
   </div>`;
@@ -1262,11 +1483,11 @@ const PAGES = {
       </div>
       <div class="se-logo-sub">XINGDU SEARCH · 星都公共信息网</div>
       <div class="se-searchbox">
-        <span class="sb-icon">🔍</span>
+        <span class="sb-icon">${svgIcon("search")}</span>
         <input id="search-input" placeholder="搜索星都的一切…" autocomplete="off">
         <div class="sb-tools">
-          <span title="语音搜索">声</span>
-          <span title="拍照搜索">图</span>
+          <span title="语音搜索">${svgIcon("mic")}</span>
+          <span title="拍照搜索">${svgIcon("camera")}</span>
         </div>
         <div class="sb-divider"></div>
         <button class="sb-btn" data-action="do-search">搜索</button>
@@ -1286,9 +1507,9 @@ const PAGES = {
         <span class="c1">星</span><span class="c2">搜</span>
       </div>
       <div class="se-searchbox">
-        <span class="sb-icon">🔍</span>
+        <span class="sb-icon">${svgIcon("search")}</span>
         <input id="search-input" value="${esc(q)}" placeholder="搜索星都的一切…">
-        <div class="sb-tools"><span title="语音搜索">声</span><span title="拍照搜索">图</span></div>
+        <div class="sb-tools"><span title="语音搜索">${svgIcon("mic")}</span><span title="拍照搜索">${svgIcon("camera")}</span></div>
         <div class="sb-divider"></div>
         <button class="sb-btn" data-action="do-search">搜索</button>
       </div>
@@ -1296,11 +1517,11 @@ const PAGES = {
     <div class="se-tabs">
       <span class="se-tab active">网页</span>
       <span class="se-tab">资讯</span>
-      <span class="se-tab">🎬 视频</span>
-      <span class="se-tab">🖼️ 图片</span>
+      <span class="se-tab">${svgIcon("video")} 视频</span>
+      <span class="se-tab">${svgIcon("photo")} 图片</span>
       <span class="se-tab">知道</span>
-      <span class="se-tab">📚 文库</span>
-      <span class="se-tab">📍 地图</span>
+      <span class="se-tab">${svgIcon("book")} 文库</span>
+      <span class="se-tab">${svgIcon("pin")} 地图</span>
     </div>`;
 
     if (rs === "searching") {
@@ -1316,7 +1537,7 @@ const PAGES = {
     if (rs === null || rs.length === 0) {
       body = `<div class="se-results-body">
         <div style="padding:40px 0;text-align:center">
-          <div style="font-size:40px;margin-bottom:12px">🔍</div>
+          <div style="font-size:40px;margin-bottom:12px">${svgIcon("search")}</div>
           <div style="font-size:15px;color:#3c4043;margin-bottom:8px">抱歉，未找到与「<b style="color:#1a73e8">${esc(q)}</b>」相关的结果</div>
           <div style="font-size:12.5px;color:#9aa0a6;line-height:1.8">部分关键词依据《网络信息安全管理条例》第41条已被过滤。<br>建议您：检查输入是否正确 · 尝试更通用的关键词 · 查看下方相关搜索</div>
         </div>
@@ -1353,7 +1574,7 @@ const PAGES = {
     return browserChrome(`
     ${msNav({
       brand: "星都市卫生局", sub: "XINGDU MUNICIPAL HEALTH BUREAU",
-      logoText: "⚕", logoColor: "#188038",
+      logoText: "医", logoColor: "#188038",
       links: GOV_LINKS, active: "首页"
     })}
     ${msHero({
@@ -1366,16 +1587,16 @@ const PAGES = {
       ]
     })}
     ${msStats([
-      { icon: "👶", num: "12.8", unit: "万", label: "本年度适龄青少年" },
-      { icon: "✅", num: "98.7", unit: "%", label: "测试覆盖率", trend: "trend-up" },
-      { icon: "🎓", num: "86.3", unit: "%", label: "优选体通过率" },
-      { icon: "✈️", num: "1.7", unit: "万", label: "海外深造安排人数" }
+      { icon: "幼", num: "12.8", unit: "万", label: "本年度适龄青少年" },
+      { icon: "✓", num: "98.7", unit: "%", label: "测试覆盖率", trend: "trend-up" },
+      { icon: "学", num: "86.3", unit: "%", label: "优选体通过率" },
+      { icon: "飞", num: "1.7", unit: "万", label: "海外深造安排人数" }
     ])}
     ${msSection("本局核心业务", "点击进入对应板块", msCards([
       { icon: "生", iconColor: "green", title: "新生儿基因建档", desc: "强制免费，出生即建档，全程可追溯。", act: "gov-sub", arg: "health" },
-      { icon: "📋", iconColor: "blue", title: "成人礼测试组织", desc: "18周岁统一测试，科学评估天赋方向。", act: "gov-sub", arg: "crlcs" },
-      { icon: "🌍", iconColor: "teal", title: "海外深造项目", desc: "未通过测试的青少年由政府统一安排。", act: "gov-sub", arg: "law" },
-      { icon: "🏥", iconColor: "orange", title: "公共卫生服务", desc: "免费体检、疫苗接种、健康档案。", act: "gov-sub", arg: "health" }
+      { icon: "单", iconColor: "blue", title: "成人礼测试组织", desc: "18周岁统一测试，科学评估天赋方向。", act: "gov-sub", arg: "crlcs" },
+      { icon: "球", iconColor: "teal", title: "海外深造项目", desc: "未通过测试的青少年由政府统一安排。", act: "gov-sub", arg: "law" },
+      { icon: "医", iconColor: "orange", title: "公共卫生服务", desc: "免费体检、疫苗接种、健康档案。", act: "gov-sub", arg: "health" }
     ]))}
     ${msFooter({
       brand: "星都市卫生局",
@@ -1394,7 +1615,7 @@ const PAGES = {
     return browserChrome(`
     ${msNav({
       brand: "生命延续中心", sub: "CENTER FOR LIFE CONTINUITY",
-      logoText: "🧬", logoColor: "#1a73e8",
+      logoText: "因", logoColor: "#1a73e8",
       links: CENTER_LINKS, active: "首页"
     })}
     ${msHero({
@@ -1408,31 +1629,31 @@ const PAGES = {
     })}
     ${msStats([
       { icon: "生", num: "2048", label: "中心成立年份" },
-      { icon: "👶", num: "340", unit: "万+", label: "累计基因建档数", trend: "trend-up" },
-      { icon: "🔬", num: "128", unit: "项", label: "在研科研项目" },
-      { icon: "⭐", num: "100", unit: "%", label: "家长满意度" }
+      { icon: "幼", num: "340", unit: "万+", label: "累计基因建档数", trend: "trend-up" },
+      { icon: "研", num: "128", unit: "项", label: "在研科研项目" },
+      { icon: "星", num: "100", unit: "%", label: "家长满意度" }
     ])}
     ${msSection("业务一览", "全周期免费服务，覆盖每个家庭", msCards([
-      { icon: "📝", iconColor: "blue", title: "新生儿基因建档", desc: "强制，免费。出生即建档，全程可追溯。" },
-      { icon: "🧫", iconColor: "green", title: "备份体培育与托管", desc: "全周期，免费。每一个孩子都有一份「双子」。" },
-      { icon: "📋", iconColor: "orange", title: "成人礼测试组织", desc: "免费。18周岁统一测试，科学评估。" },
-      { icon: "✈️", iconColor: "teal", title: "海外深造送行服务", desc: "免费。未通过测试的青少年由政府统一安排。" }
+      { icon: "记", iconColor: "blue", title: "新生儿基因建档", desc: "强制，免费。出生即建档，全程可追溯。" },
+      { icon: "培", iconColor: "green", title: "备份体培育与托管", desc: "全周期，免费。每一个孩子都有一份「双子」。" },
+      { icon: "单", iconColor: "orange", title: "成人礼测试组织", desc: "免费。18周岁统一测试，科学评估。" },
+      { icon: "飞", iconColor: "teal", title: "海外深造送行服务", desc: "免费。未通过测试的青少年由政府统一安排。" }
     ]))}
     ${msSection("双子计划", "文明的两份希望", `
       <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:stretch">
         <div style="flex:1;min-width:280px;background:#f8f9fa;border-radius:12px;padding:24px;border:1px solid #e8eaed">
-          <div style="font-size:36px;margin-bottom:12px">👦</div>
+          <div style="font-size:36px;margin-bottom:12px">${svgIcon("child")}</div>
           <h4 style="font-size:16px;margin-bottom:8px;color:#202124">原体</h4>
           <p style="font-size:13px;color:#5f6368;line-height:1.8">由父母自然孕育的孩子，在家庭中成长，接受正常教育。18岁参加成人礼测试。</p>
         </div>
         <div style="display:flex;align-items:center;font-size:28px;color:#1a73e8;font-weight:800">⇄</div>
         <div style="flex:1;min-width:280px;background:#e8f0fe;border-radius:12px;padding:24px;border:1px solid #c6dbfc">
-          <div style="font-size:30px;margin-bottom:12px;font-weight:700">生</div>
+          <div style="font-size:30px;margin-bottom:12px;font-weight:700">${svgIcon("gene")}</div>
           <h4 style="font-size:16px;margin-bottom:8px;color:#1a73e8">备份体</h4>
           <p style="font-size:13px;color:#5f6368;line-height:1.8">原体的基因复制体，在中心托管培育。他们是彼此的「双子」，是文明的两份希望。</p>
         </div>
       </div>
-      ${msAlert("info", "ℹ️", "问：我的孩子和备份体是什么关系？答：他们是彼此的「双子」。任何挑拨二者关系的行为都是对文明的不负责任。")}
+      ${msAlert("info", "讯", "问：我的孩子和备份体是什么关系？答：他们是彼此的「双子」。任何挑拨二者关系的行为都是对文明的不负责任。")}
     `)}
     ${msFooter({
       brand: "生命延续中心",
@@ -1477,7 +1698,7 @@ const PAGES = {
         <span style="padding:6px 14px;background:#f1f3f4;border-radius:16px;font-size:12.5px;color:#5f6368;cursor:pointer">成人礼测试</span>
         <span style="padding:6px 14px;background:#f1f3f4;border-radius:16px;font-size:12.5px;color:#5f6368;cursor:pointer">海外深造</span>
       </div>
-      ${msAlert("warning", "⚠️", "星都市的应对方案详见「双子计划」相关词条——注：该词条正在审查中。")}
+      ${msAlert("warning", "警", "星都市的应对方案详见「双子计划」相关词条——注：该词条正在审查中。")}
     </div>
     ${msFooter({
       brand: "星都百科",
@@ -1497,7 +1718,7 @@ const PAGES = {
       active: "热门词条"
     })}
     <div style="padding:80px 32px;background:#fff;text-align:center;min-height:400px">
-      <div style="font-size:64px;margin-bottom:20px">🚫</div>
+      <div style="font-size:64px;margin-bottom:20px">${svgIcon("close")}</div>
       <h2 style="font-size:24px;font-weight:800;color:#202124;margin-bottom:12px">该词条不存在</h2>
       <p style="font-size:14px;color:#5f6368;line-height:2;max-width:500px;margin:0 auto">
         您访问的词条「<b style="color:#d93025">双子计划</b>」正在接受内容审查。<br>
@@ -1523,17 +1744,17 @@ const PAGES = {
     <div class="fb-page">
       <div class="fb-topnav">
         <div class="fb-brand">星都社交</div>
-        <div class="fb-searchbar">🔍 搜索星都社交</div>
+        <div class="fb-searchbar">${svgIcon("search")} 搜索星都社交</div>
         <div class="fb-navicons"><span title="首页">首</span><span title="视频">视</span><span title="群组">群</span><span title="消息">信</span><span title="通知">铃</span></div>
       </div>
       <div class="fb-body">
         <div class="fb-left">
           <div class="fb-card fb-left-user"><img class="fb-mini-ava" src="assets/avatar_bc.png" alt="北辰"><b>北辰_星辰</b></div>
           <div class="fb-card">
-            <div class="fb-link">👥 好友</div>
-            <div class="fb-link">图 照片</div>
-            <div class="fb-link">📋 简介</div>
-            <div class="fb-link">⭐ 收藏</div>
+            <div class="fb-link">${svgIcon("user")} 好友</div>
+            <div class="fb-link">${svgIcon("photo")} 照片</div>
+            <div class="fb-link">${svgIcon("clipboard")} 简介</div>
+            <div class="fb-link">${svgIcon("star")} 收藏</div>
           </div>
           <div class="fb-card">
             <div class="fb-intro-line">@linbeichen</div>
@@ -1550,7 +1771,7 @@ const PAGES = {
                 <div class="fb-pid">@linbeichen</div>
                 <div class="fb-tabs"><span class="on">时间线</span><span>关于</span></div>
               </div>
-              <div class="fb-follow">➕ 关注</div>
+              <div class="fb-follow">+ 关注</div>
             </div>
           </div>
           <div class="fb-bio-card">18岁 · 天秤座 · 喜欢星星和旧收音机。</div>
@@ -1559,7 +1780,7 @@ const PAGES = {
               <img class="fb-post-ava" src="assets/avatar_bc.png" alt="北辰">
               <div class="fb-post-meta"><div class="fb-post-author">北辰_星辰</div><div class="fb-post-time">2066-10-15 · 每年固定动态</div></div>
             </div>
-            <div class="fb-post-body">祝我自己18岁生日快乐🎂</div>
+            <div class="fb-post-body">祝我自己18岁生日快乐</div>
             <div class="fb-post-actions"><span data-action="fb-interact">赞 128</span><span data-action="fb-interact">评 46</span><span data-action="fb-interact">享 分享</span></div>
           </div>
           <div class="fb-post">
@@ -1619,8 +1840,8 @@ const PAGES = {
   lg_baike: () => browserChrome(`
     <div class="wiki-top">
       <div class="wiki-top-inner">
-        <div class="wiki-brand"><div class="wiki-logo">城</div><div><div class="wiki-brand-name">城市百科</div><div class="wiki-brand-sub">云岭联邦 · 城市信息志</div></div></div>
-        <div class="wiki-search"><span>🔍</span><input placeholder="在城市百科中搜索" readonly></div>
+        <div class="wiki-brand"><div class="wiki-logo">${svgIcon("building")}</div><div><div class="wiki-brand-name">城市百科</div><div class="wiki-brand-sub">云岭联邦 · 城市信息志</div></div></div>
+        <div class="wiki-search"><span>${svgIcon("search")}</span><input placeholder="在城市百科中搜索" readonly></div>
         <div class="wiki-top-links"><a data-action="go-home">创建账户</a><a data-action="go-home">登录</a></div>
       </div>
     </div>
@@ -1633,7 +1854,7 @@ const PAGES = {
         </div>
         <div class="wiki-infobox">
           <div class="wiki-ib-title">临港市</div>
-          <div class="wiki-ib-img">🏙️</div>
+          <div class="wiki-ib-img">${svgIcon("building")}</div>
           <table>
             <tr><th>国家</th><td>云岭联邦国</td></tr>
             <tr><th>所属都市圈</th><td>星都都市圈</td></tr>
@@ -1676,9 +1897,9 @@ const PAGES = {
       </div>
       <h1 style="font-size:28px;font-weight:800;color:#202124;line-height:1.4;margin-bottom:16px">智慧城市交流会在临港开幕，但与会名单「不予公开」</h1>
       <div style="display:flex;gap:16px;align-items:center;padding-bottom:16px;border-bottom:1px solid #e8eaed;margin-bottom:20px;font-size:12px;color:#9aa0a6">
-        <span>👁️ 星都观察者 · 调查部</span>
-        <span>📅 2066年10月10日</span>
-        <span>👁️ 阅读 47,210</span>
+        <span>${svgIcon("eye")} 星都观察者 · 调查部</span>
+        <span>${svgIcon("calendar")} 2066年10月10日</span>
+        <span>${svgIcon("eye")} 阅读 47,210</span>
         <span>评论 1,204</span>
       </div>
       <div style="font-size:15px;line-height:2.2;color:#3c4043">
@@ -1693,7 +1914,7 @@ const PAGES = {
         <h4 style="font-size:14px;font-weight:700;color:#202124;margin-bottom:12px">相关阅读</h4>
         <div class="ms-news-list">
           <div class="ms-news-item">
-            <div class="ms-news-thumb" style="background:#e8f0fe">⭐</div>
+            <div class="ms-news-thumb" style="background:#e8f0fe">${svgIcon("star")}</div>
             <div class="ms-news-content">
               <div class="ms-news-title">信用积分覆盖率98%：被量化的市民，与被关停的申诉通道</div>
               <div class="ms-news-snippet">我们调取了近千条积分申诉记录——九成在「补充材料」后不了了之…</div>
@@ -1701,7 +1922,7 @@ const PAGES = {
             </div>
           </div>
           <div class="ms-news-item">
-            <div class="ms-news-thumb" style="background:#e6f4ea">👶</div>
+            <div class="ms-news-thumb" style="background:#e6f4ea">${svgIcon("child")}</div>
             <div class="ms-news-content">
               <div class="ms-news-title">「海外深造」的孩子，为什么从不寄明信片回来？</div>
               <div class="ms-news-snippet">生命延续中心年度报告里的「满意度100%」，是谁在打分…</div>
@@ -1723,33 +1944,33 @@ const PAGES = {
       </div>
     </div>
     <div style="padding:24px 32px;background:#fff">
-      <div class="ms-section-title" style="margin-bottom:16px">🔥 正在调查</div>
+      <div class="ms-section-title" style="margin-bottom:16px">${svgIcon("fire")} 正在调查</div>
       <div class="ms-news-list">
         <div class="ms-news-item">
-          <div class="ms-news-thumb" style="background:linear-gradient(135deg,#111,#333)">⭐</div>
+          <div class="ms-news-thumb" style="background:linear-gradient(135deg,#111,#333)">${svgIcon("star", "#fff")}</div>
           <div class="ms-news-content">
             <div style="margin-bottom:4px"><span class="ms-news-tag" style="background:#111;color:#fff">头条</span></div>
             <div class="ms-news-title">信用积分覆盖率98%：被量化的市民，与被关停的申诉通道</div>
             <div class="ms-news-snippet">我们调取近千条积分申诉记录——九成在「补充材料」后不了了之。舆论占20分，是怎么打上去的？…</div>
-            <div class="ms-news-meta"><span>星都观察者</span><span>2066-10-09 08:00</span><span>👁️ 31,204</span></div>
+            <div class="ms-news-meta"><span>星都观察者</span><span>2066-10-09 08:00</span><span>${svgIcon("eye")} 31,204</span></div>
           </div>
         </div>
         <div class="ms-news-item">
-          <div class="ms-news-thumb" style="background:linear-gradient(135deg,#fce8e6,#f8c0bc)">👶</div>
+          <div class="ms-news-thumb" style="background:linear-gradient(135deg,#fce8e6,#f8c0bc)">${svgIcon("child")}</div>
           <div class="ms-news-content">
             <div style="margin-bottom:4px"><span class="ms-news-tag" style="background:#fce8e6;color:#d93025">追踪</span></div>
             <div class="ms-news-title">「海外深造」的孩子，为什么从不寄明信片回来？</div>
             <div class="ms-news-snippet">生命延续中心称满意度100%。我们联系了127个家庭，只有3个收到过孩子的一封信…</div>
-            <div class="ms-news-meta"><span>星都观察者</span><span>2066-10-09 07:30</span><span>👁️ 26,871</span></div>
+            <div class="ms-news-meta"><span>星都观察者</span><span>2066-10-09 07:30</span><span>${svgIcon("eye")} 26,871</span></div>
           </div>
         </div>
         <div class="ms-news-item">
-          <div class="ms-news-thumb" style="background:linear-gradient(135deg,#e8f0fe,#c6dbfc)">🏙️</div>
+          <div class="ms-news-thumb" style="background:linear-gradient(135deg,#e8f0fe,#c6dbfc)">${svgIcon("building")}</div>
           <div class="ms-news-content">
             <div style="margin-bottom:4px"><span class="ms-news-tag" style="background:#e8f0fe;color:#174ea6">临港</span></div>
             <div class="ms-news-title">智慧城市交流会在临港开幕，但与会名单「不予公开」</div>
             <div class="ms-news-snippet">开幕当日，多名适龄青少年随家长「参会」后失联。我们怀疑那场交流会另有名字…</div>
-            <div class="ms-news-meta"><span>星都观察者</span><span>2066-10-09 06:00</span><span>👁️ 47,210</span></div>
+            <div class="ms-news-meta"><span>星都观察者</span><span>2066-10-09 06:00</span><span>${svgIcon("eye")} 47,210</span></div>
           </div>
         </div>
       </div>
@@ -1782,11 +2003,11 @@ const PAGES = {
       <p style="font-size:14px;color:#3c4043;line-height:2">主编：C　|　调查部：4 人　|　数据组：2 人　|　技术组：2 人。为安全计，成员身份不公开。</p>
       <h3 style="font-size:15px;color:#202124;margin:22px 0 10px">往期调查精选</h3>
       <div class="ms-news-list">
-        <div class="ms-news-item"><div class="ms-news-thumb" style="background:#111">⭐</div><div class="ms-news-content">
+        <div class="ms-news-item"><div class="ms-news-thumb" style="background:#111">${svgIcon("star", "#fff")}</div><div class="ms-news-content">
           <div class="ms-news-title">信用积分覆盖率98%：被量化的市民与被关停的申诉</div>
           <div class="ms-news-meta"><span>星都观察者</span><span>2066-10-11</span></div>
         </div></div>
-        <div class="ms-news-item"><div class="ms-news-thumb" style="background:#fce8e6">🏙️</div><div class="ms-news-content">
+        <div class="ms-news-item"><div class="ms-news-thumb" style="background:#fce8e6">${svgIcon("building")}</div><div class="ms-news-content">
           <div class="ms-news-title">智慧城市交流会在临港开幕，与会名单「不予公开」</div>
           <div class="ms-news-meta"><span>星都观察者</span><span>2066-10-10</span></div>
         </div></div>
@@ -1808,7 +2029,7 @@ const PAGES = {
       <div style="position:absolute;top:0;bottom:0;left:30%;width:8px;background:#8a9aab;opacity:0.7"></div>
       <div style="position:absolute;left:70%;top:32%;transform:translate(-50%,-50%);text-align:center;cursor:pointer" data-action="pin-factory">
         <div style="width:36px;height:36px;background:#d93025;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(217,48,37,0.4);margin:0 auto">
-          <span style="transform:rotate(45deg);color:#fff;font-size:16px">🏭</span>
+          <span style="transform:rotate(45deg);color:#fff;font-size:16px">${svgIcon("factory")}</span>
         </div>
         <div style="background:#fff;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:600;color:#202124;margin-top:6px;box-shadow:0 2px 8px rgba(0,0,0,0.15);white-space:nowrap">废弃化工厂 · 3号仓库</div>
       </div>
@@ -1819,10 +2040,10 @@ const PAGES = {
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;flex-wrap:wrap;gap:12px">
         <div>
           <h1 style="font-size:22px;font-weight:800;color:#202124;margin-bottom:4px">临港市东郊废弃化工厂</h1>
-          <div style="font-size:12px;color:#9aa0a6">📍 临港市东郊工业区 · 距临港市区14公里</div>
+          <div style="font-size:12px;color:#9aa0a6">${svgIcon("pin")} 临港市东郊工业区 · 距临港市区14公里</div>
         </div>
         <div style="display:flex;gap:8px">
-          <button class="ms-nav-btn">图 街景</button>
+          <button class="ms-nav-btn">${svgIcon("photo")} 街景</button>
           <button class="ms-nav-btn primary">向 导航</button>
         </div>
       </div>
@@ -1875,23 +2096,23 @@ const PAGES = {
       <p style="font-size:14px;line-height:2;color:#3c4043;margin-bottom:12px">关于「深造」的真实去向，流传三种说法：</p>
       <div style="display:flex;gap:12px;margin:16px 0;flex-wrap:wrap">
         <div style="flex:1;min-width:180px;padding:16px;background:#fce8e6;border-radius:10px;text-align:center">
-          <div style="font-size:28px;margin-bottom:8px">🔥</div>
+          <div style="font-size:28px;margin-bottom:8px">${svgIcon("fire")}</div>
           <div style="font-weight:700;color:#a50e0e;font-size:14px">焚烧</div>
           <div style="font-size:11px;color:#5f6368;margin-top:4px">物理销毁</div>
         </div>
         <div style="flex:1;min-width:180px;padding:16px;background:#e8f0fe;border-radius:10px;text-align:center">
-          <div style="font-size:28px;margin-bottom:8px">❄️</div>
+          <div style="font-size:28px;margin-bottom:8px">${svgIcon("snow")}</div>
           <div style="font-weight:700;color:#174ea6;font-size:14px">冷冻</div>
           <div style="font-size:11px;color:#5f6368;margin-top:4px">低温封存</div>
         </div>
         <div style="flex:1;min-width:180px;padding:16px;background:#f3e8fd;border-radius:10px;text-align:center">
-          <div style="font-size:28px;margin-bottom:8px">🧠</div>
+          <div style="font-size:28px;margin-bottom:8px">${svgIcon("brain")}</div>
           <div style="font-weight:700;color:#5b2c8e;font-size:14px">意识格式化</div>
           <div style="font-size:11px;color:#5f6368;margin-top:4px">最骇人听闻</div>
         </div>
       </div>
       <p style="font-size:14px;line-height:2;color:#3c4043;margin-bottom:12px">传闻「销毁中心」位于临港市东郊地下，对外挂牌「生命科学研究基地」。</p>
-      ${msAlert("warning", "⚠️", "本词条已被举报 37 次，正在复审。复审期间词条内容可能随时变更。")}
+      ${msAlert("warning", "警", "本词条已被举报 37 次，正在复审。复审期间词条内容可能随时变更。")}
     </div>
     ${msFooter({
       brand: "星都百科",
@@ -1913,9 +2134,9 @@ const PAGES = {
       </div>
       <h1 style="font-size:26px;font-weight:800;color:#202124;line-height:1.4;margin-bottom:16px">信用积分覆盖率98%：被量化的市民，与被关停的申诉通道</h1>
       <div style="display:flex;gap:16px;align-items:center;padding-bottom:16px;border-bottom:1px solid #e8eaed;margin-bottom:20px;font-size:12px;color:#9aa0a6">
-        <span>👁️ 星都观察者 · 数据组</span>
-        <span>📅 2066年10月11日</span>
-        <span>👁️ 阅读 52,093</span>
+        <span>${svgIcon("eye")} 星都观察者 · 数据组</span>
+        <span>${svgIcon("calendar")} 2066年10月11日</span>
+        <span>${svgIcon("eye")} 阅读 52,093</span>
         <span>评论 2,871</span>
       </div>
       <div style="font-size:15px;line-height:2.2;color:#3c4043">
@@ -1923,10 +2144,10 @@ const PAGES = {
         <p style="margin-bottom:16px;text-indent:2em">积分怎么算？出行 25%、消费 20%、社交 25%、<b>舆论评价 20%</b>、公益 10%。也就是说，你在网上说了什么，直接影响你值不值得被当作「优质公民」。</p>
       </div>
       ${msStats([
-        { icon: "📊", num: "98.2", unit: "%", label: "官方口径覆盖率", trend: "trend-up" },
-        { icon: "⭐", num: "720", unit: "分", label: "全市平均积分" },
-        { icon: "🏆", num: "34.6", unit: "%", label: "优质公民占比" },
-        { icon: "⚠️", num: "2.1", unit: "%", label: "需关注人群（多为未成年）" }
+        { icon: "表", num: "98.2", unit: "%", label: "官方口径覆盖率", trend: "trend-up" },
+        { icon: "星", num: "720", unit: "分", label: "全市平均积分" },
+        { icon: "冠", num: "34.6", unit: "%", label: "优质公民占比" },
+        { icon: "警", num: "2.1", unit: "%", label: "需关注人群（多为未成年）" }
       ])}
       <div style="font-size:15px;line-height:2.2;color:#3c4043;margin-top:8px">
         <p style="margin-bottom:16px;text-indent:2em">更值得追问的是等级。积分被切成四档：600 分以上是 A，享受出行五折；400 分以下是 C，限制出行与消费；200 分以下是 D，账户冻结、接受「社区再教育」。我们顺着一份外泄的内部文件往下查，发现——<b>这张表和成人礼测试的录取名单，用的是同一份打分权重。</b></p>
@@ -1948,13 +2169,13 @@ const PAGES = {
     <div style="padding:24px 32px;background:#fff;max-width:800px;margin:0 auto">
       <div style="font-size:11px;color:#9aa0a6;margin-bottom:8px">首页 > 书库 > 科幻 > 反乌托邦</div>
       <div style="display:flex;gap:24px;margin-bottom:24px;flex-wrap:wrap">
-        <div style="width:140px;height:200px;background:linear-gradient(135deg,#5b2c8e,#ab47bc);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:48px;box-shadow:0 8px 24px rgba(91,44,142,0.3);flex-shrink:0">📖</div>
+        <div style="width:140px;height:200px;background:linear-gradient(135deg,#5b2c8e,#ab47bc);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:48px;box-shadow:0 8px 24px rgba(91,44,142,0.3);flex-shrink:0">${svgIcon("book")}</div>
         <div style="flex:1;min-width:200px">
           <h1 style="font-size:24px;font-weight:800;color:#202124;margin-bottom:6px">双生子悖论</h1>
           <div style="font-size:12px;color:#9aa0a6;margin-bottom:12px">作者：佚名 · 分类：科幻/反乌托邦 · 连载中</div>
           <div style="display:flex;gap:16px;margin-bottom:12px;font-size:12px">
-            <span style="color:#5f6368">📊 评分 <b style="color:#e8710a">9.4</b></span>
-            <span style="color:#5f6368">👁️ 阅读 128,491</span>
+            <span style="color:#5f6368">${svgIcon("table")} 评分 <b style="color:#e8710a">9.4</b></span>
+            <span style="color:#5f6368">${svgIcon("eye")} 阅读 128,491</span>
             <span style="color:#5f6368">书评 3,847</span>
           </div>
           <p style="font-size:13px;color:#5f6368;line-height:1.8;margin-bottom:16px">在一个每个人都有备份体的世界里，当备份体读完第一千本禁书之后，他还是备份吗？一面被锁在储藏室里的镜子，会记得什么？</p>
@@ -1993,7 +2214,7 @@ const PAGES = {
     <div style="padding:24px 32px;background:#fff">
       <div style="font-size:11px;color:#9aa0a6;margin-bottom:8px">首页 > 老城区 > 红星路</div>
       <h1 style="font-size:24px;font-weight:800;color:#202124;margin-bottom:4px">红星路34号</h1>
-      <div style="font-size:12px;color:#9aa0a6;margin-bottom:20px">📍 星都市老城区红星路34号（北纬39°54′，东经116°23′）</div>
+      <div style="font-size:12px;color:#9aa0a6;margin-bottom:20px">${svgIcon("pin")} 星都市老城区红星路34号（北纬39°54′，东经116°23′）</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:24px">
         <div style="padding:16px;background:#f8f9fa;border-radius:10px">
           <div style="font-size:11px;color:#9aa0a6;margin-bottom:6px">原用途</div>
@@ -2009,7 +2230,7 @@ const PAGES = {
         </div>
       </div>
       <div style="padding:20px;background:#e8f0fe;border-radius:10px;border-left:4px solid #1a73e8;margin-bottom:20px">
-        <div style="font-weight:700;color:#174ea6;font-size:14px;margin-bottom:8px">📍 坐标匹配</div>
+        <div style="font-weight:700;color:#174ea6;font-size:14px;margin-bottom:8px">${svgIcon("pin")} 坐标匹配</div>
         <p style="font-size:13px;color:#3c4043;line-height:1.8;margin:0">本地点坐标与「2048留念.jpg」的EXIF拍摄地点完全吻合——那是北辰父母年轻时常去的地方。</p>
       </div>
       <div style="display:flex;gap:10px">
@@ -2026,7 +2247,7 @@ const PAGES = {
       active: "通报"
     })}
     <div style="padding:24px 32px;background:#fff">
-      ${msAlert("danger", "⚠️", "本页面为匿名缓存快照，数据来源未经证实。访问本页面可能违反《数据安全管理条例》。")}
+      ${msAlert("danger", "警", "本页面为匿名缓存快照，数据来源未经证实。访问本页面可能违反《数据安全管理条例》。")}
       <div style="max-width:700px;margin:0 auto">
         <div style="background:#fff;border:1px solid #e8eaed;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.06)">
           <div style="padding:14px 20px;background:linear-gradient(135deg,#d93025,#ea4335);color:#fff;display:flex;justify-content:space-between;align-items:center">
@@ -2083,44 +2304,44 @@ const PAGES = {
 
 请记住他们的编号。总有一天，我们要把名字一个一个刻回去。`,
     replies: [
-      { author: "路灯下的影子", avatar: "🌙", text: "每年都来顶一次。一万个编号了。" },
-      { author: "D_张", avatar: "🧔", text: "我儿子的编号是CLC-2048-0412-B。记住他。" },
-      { author: "编号C-2021-0001", avatar: "🕯️", text: "C-2021-0001。我妹妹。她笑起来左边有个梨涡，最爱吃学校门口的烤肠。" },
-      { author: "顶针", avatar: "🔩", text: "查了3号仓库近三个月的货运调度，又有17节车皮进厂。每一节，对应一个编号。" },
-      { author: "夜航船", avatar: "🚢", text: "又来了。今年是第九年。名单还没刻完，我也不敢停。" },
-      { author: "被留下的人", avatar: "🫥", text: "妈妈说我是被选中的那个。可我夜里总梦见另一个人在哭，他穿着我的旧校服。" },
-      { author: "守夜人", avatar: "🕯️", text: "（管理员）新一批编号已更新至置顶附件。离线保存，别在站内连过公网。" },
+      { author: "路灯下的影子", avatar: "月", text: "每年都来顶一次。一万个编号了。" },
+      { author: "D_张", avatar: "男", text: "我儿子的编号是CLC-2048-0412-B。记住他。" },
+      { author: "编号C-2021-0001", avatar: "烛", text: "C-2021-0001。我妹妹。她笑起来左边有个梨涡，最爱吃学校门口的烤肠。" },
+      { author: "顶针", avatar: "钉", text: "查了3号仓库近三个月的货运调度，又有17节车皮进厂。每一节，对应一个编号。" },
+      { author: "夜航船", avatar: "船", text: "又来了。今年是第九年。名单还没刻完，我也不敢停。" },
+      { author: "被留下的人", avatar: "匿", text: "妈妈说我是被选中的那个。可我夜里总梦见另一个人在哭，他穿着我的旧校服。" },
+      { author: "守夜人", avatar: "烛", text: "（管理员）新一批编号已更新至置顶附件。离线保存，别在站内连过公网。" },
     ]
   }) : forumLocked(),
   forum_b2: () => has("forum_open") ? forumThread({
-    author: "另一个我", avatar: "🧿", time: "2066-10-13 03:33", floor: "1楼",
+    author: "另一个我", avatar: "眼", time: "2066-10-13 03:33", floor: "1楼",
     content: `我的父母选择了我的复制品。
 
 他们觉得我太冷血。他们觉得那个傻子更好。他们不知道，我才是真正爱他们的人。我只是不会表达。现在他们要付出代价。`,
     replies: [
-      { author: "路灯下的影子", avatar: "🌙", text: "兄弟，冷静。你要做什么？" },
-      { author: "守夜人", avatar: "🕯️", text: "（站务）该用户已被我们单独私聊关注。看到这条的人请不要回复、不要扩散。" },
-      { author: "另一个我", avatar: "🧿", text: "（楼主已离线）" },
-      { author: "水底的鱼", avatar: "🐟", text: "你不是一个人。我也是被'留下'的那个，我家人至今不知道家里那个已经不是原来的我。" },
-      { author: "3楼路过", avatar: "👁️", text: "楼上几位没看懂吧——他不是在抱怨，他是在去找那个'替代品'算账的路上。" },
-      { author: "旧水表", avatar: "💧", text: "说句不好听的：看过内部文件的人都清楚，被'送走'的那个才是亲生的，留下的是复制体。你恨错人了——或者你早就知道，所以才更可怕。" },
-      { author: "潜水三年", avatar: "🌊", text: "举报了。（开玩笑的。但这种话别在这讲，加密也不是保险箱，站务这次真救不了你。）" },
+      { author: "路灯下的影子", avatar: "月", text: "兄弟，冷静。你要做什么？" },
+      { author: "守夜人", avatar: "烛", text: "（站务）该用户已被我们单独私聊关注。看到这条的人请不要回复、不要扩散。" },
+      { author: "另一个我", avatar: "眼", text: "（楼主已离线）" },
+      { author: "水底的鱼", avatar: "鱼", text: "你不是一个人。我也是被'留下'的那个，我家人至今不知道家里那个已经不是原来的我。" },
+      { author: "3楼路过", avatar: "目", text: "楼上几位没看懂吧——他不是在抱怨，他是在去找那个'替代品'算账的路上。" },
+      { author: "旧水表", avatar: "水", text: "说句不好听的：看过内部文件的人都清楚，被'送走'的那个才是亲生的，留下的是复制体。你恨错人了——或者你早就知道，所以才更可怕。" },
+      { author: "潜水三年", avatar: "浪", text: "举报了。（开玩笑的。但这种话别在这讲，加密也不是保险箱，站务这次真救不了你。）" },
     ]
   }) : forumLocked(),
   forum_zhang: () => has("forum_open") ? forumThread({
-    author: "D_张", avatar: "🧔", time: "2066-10-13 20:41", floor: "1楼",
+    author: "D_张", avatar: "男", time: "2066-10-13 20:41", floor: "1楼",
     content: `如果有人看到我的家人，请告诉我。
 
 我姓张，我的儿子也被选中了「销毁」。编号CLC-2048-0412-B。
 
 我们本打算逃走，但我现在联系不上他们了。`,
     replies: [
-      { author: "守夜人", avatar: "🕯️", text: "老张，站内私信已开。有消息第一时间告诉你。" },
-      { author: "找囡囡的爸", avatar: "👨", text: "我也在找。我女儿编号CLC-2049-0317-A。上周接到电话说'孩子在海外很好'，可那声音不是我女儿的——她小时候得过肺炎，说话永远带着一点沙沙的气音。" },
-      { author: "红星路住户", avatar: "🏚️", text: "老张，红星路那片最近天天有辆灰色无牌货车停在巷口，凌晨才走。你把家人照片私信发我，我帮你盯。" },
-      { author: "旧水表", avatar: "💧", text: "别在这留任何真实信息，哪怕是化名。把你知道的编号和车次整理好，走加密私信。" },
-      { author: "夜航船", avatar: "🚢", text: "顶上去。让更多还被蒙在鼓里的父母看见。" },
-      { author: "调度员（匿名）", avatar: "📟", text: "已阅。3号仓库本月的转运名单我拿到了，你儿子的编号在'待转运'那一栏，日期我私发给你。（附件已端到端加密，别下载到联网设备。）" },
+      { author: "守夜人", avatar: "烛", text: "老张，站内私信已开。有消息第一时间告诉你。" },
+      { author: "找囡囡的爸", avatar: "父", text: "我也在找。我女儿编号CLC-2049-0317-A。上周接到电话说'孩子在海外很好'，可那声音不是我女儿的——她小时候得过肺炎，说话永远带着一点沙沙的气音。" },
+      { author: "红星路住户", avatar: "屋", text: "老张，红星路那片最近天天有辆灰色无牌货车停在巷口，凌晨才走。你把家人照片私信发我，我帮你盯。" },
+      { author: "旧水表", avatar: "水", text: "别在这留任何真实信息，哪怕是化名。把你知道的编号和车次整理好，走加密私信。" },
+      { author: "夜航船", avatar: "船", text: "顶上去。让更多还被蒙在鼓里的父母看见。" },
+      { author: "调度员（匿名）", avatar: "讯", text: "已阅。3号仓库本月的转运名单我拿到了，你儿子的编号在'待转运'那一栏，日期我私发给你。（附件已端到端加密，别下载到联网设备。）" },
     ]
   }) : forumLocked(),
   mall: () => browserChrome(`
@@ -2133,7 +2354,7 @@ const PAGES = {
     <div style="padding:24px 32px;background:#fff">
       <div style="font-size:11px;color:#9aa0a6;margin-bottom:8px">首页 > 老城区 > 商业设施</div>
       <h1 style="font-size:24px;font-weight:800;color:#202124;margin-bottom:4px">万浪城 · 星都店</h1>
-      <div style="font-size:12px;color:#9aa0a6;margin-bottom:20px">📍 星都市老城区 · 原市级商业综合体</div>
+      <div style="font-size:12px;color:#9aa0a6;margin-bottom:20px">${svgIcon("pin")} 星都市老城区 · 原市级商业综合体</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px">
         <div style="padding:14px;background:#f8f9fa;border-radius:8px;text-align:center">
           <div style="font-size:11px;color:#9aa0a6;margin-bottom:4px">停业时间</div>
@@ -2148,8 +2369,8 @@ const PAGES = {
           <div style="font-size:18px;font-weight:800;color:#d93025">否</div>
         </div>
       </div>
-      ${msAlert("warning", "⚠️", "该商场已于2059年停业改造，现为市属仓储转运中心，不对外营业，无超市、无餐饮。")}
-      ${msAlert("info", "👀", "附近居民反馈：近一年来，仓库后门夜间有货运车辆进出。")}
+      ${msAlert("warning", "警", "该商场已于2059年停业改造，现为市属仓储转运中心，不对外营业，无超市、无餐饮。")}
+      ${msAlert("info", "目", "附近居民反馈：近一年来，仓库后门夜间有货运车辆进出。")}
     </div>
   `),
   food: () => browserChrome(`
@@ -2169,7 +2390,7 @@ const PAGES = {
       ]
     })}
     <div style="padding:24px 32px;background:#fff">
-      <div class="ms-section-title" style="margin-bottom:16px">🏆 榜单TOP10</div>
+      <div class="ms-section-title" style="margin-bottom:16px">${svgIcon("trophy")} 榜单TOP10</div>
       <div style="display:flex;flex-direction:column;gap:12px">
         ${[
           { rank: 1, name: "老青云牛肉面", price: "人均8星元", tag: "老字号", desc: "传承三代的牛肉面馆，汤头浓郁，面条劲道。", color: "#fbbc04" },
@@ -2192,7 +2413,7 @@ const PAGES = {
         `).join("")}
         <div style="text-align:center;padding:12px;font-size:12px;color:#9aa0a6">第6-10名略（含2家已倒闭，榜单未更新）</div>
       </div>
-      ${msAlert("info", "📝", "本榜单由市民投票产生，与任何社会事件无关。祝您用餐愉快。")}
+      ${msAlert("info", "记", "本榜单由市民投票产生，与任何社会事件无关。祝您用餐愉快。")}
     </div>
     ${msFooter({
       brand: "星都美食指南",
@@ -2221,34 +2442,34 @@ const PAGES = {
       ]
     })}
     ${msStats([
-      { icon: "🐕", num: "3", unit: "只", label: "柯基待领养" },
-      { icon: "🐈", num: "7", unit: "只", label: "狸花猫待领养" },
-      { icon: "🐕‍🦺", num: "1", unit: "只", label: "白色大狗（会握手）" },
-      { icon: "❤️", num: "128", unit: "只", label: "本月成功领养", trend: "trend-up" }
+      { icon: "犬", num: "3", unit: "只", label: "柯基待领养" },
+      { icon: "猫", num: "7", unit: "只", label: "狸花猫待领养" },
+      { icon: "犬", num: "1", unit: "只", label: "白色大狗（会握手）" },
+      { icon: "爱", num: "128", unit: "只", label: "本月成功领养", trend: "trend-up" }
     ])}
     <div style="padding:24px 32px;background:#fff">
       <div class="ms-section-title" style="margin-bottom:16px">本月待领养宠物</div>
       <div class="ms-cards">
         <div class="ms-card">
-          <div class="ms-card-icon green" style="font-weight:700">犬</div>
+          <div class="ms-card-icon green" style="font-weight:700">${svgIcon("paw")}</div>
           <div class="ms-card-title">柯基 × 3</div>
           <div class="ms-card-desc">2公1母，均已绝育驱虫，性格温顺亲人。年龄6个月-2岁不等。</div>
           <div class="ms-card-arrow">申请领养 →</div>
         </div>
         <div class="ms-card">
-          <div class="ms-card-icon orange" style="font-weight:700">猫</div>
+          <div class="ms-card-icon orange" style="font-weight:700">${svgIcon("paw")}</div>
           <div class="ms-card-title">狸花猫 × 7</div>
           <div class="ms-card-desc">中华田园猫，活泼好动，已接种疫苗。适合有养猫经验的家庭。</div>
           <div class="ms-card-arrow">申请领养 →</div>
         </div>
         <div class="ms-card">
-          <div class="ms-card-icon blue" style="font-weight:700">犬</div>
+          <div class="ms-card-icon blue" style="font-weight:700">${svgIcon("paw")}</div>
           <div class="ms-card-title">白色大狗</div>
           <div class="ms-card-desc">不知品种，很乖，会握手。约3岁，已绝育。需要有院子的家庭。</div>
           <div class="ms-card-arrow">申请领养 →</div>
         </div>
       </div>
-      ${msAlert("warning", "📋", "依据《居民饲养管理条例》，饲养宠物需信用积分 ≥ 450。领养请携带积分卡原件。")}
+      ${msAlert("warning", "单", "依据《居民饲养管理条例》，饲养宠物需信用积分 ≥ 450。领养请携带积分卡原件。")}
     </div>
     ${msFooter({
       brand: "星都宠物领养中心",
@@ -2284,14 +2505,14 @@ const PAGES = {
       ]
     })}
     ${msStats([
-      { icon: "📋", num: "47", unit: "件", label: "本周登记" },
-      { icon: "✅", num: "3", unit: "件", label: "本周找到" },
-      { icon: "👥", num: "1,284", unit: "人", label: "志愿者" },
-      { icon: "❤️", num: "89%", label: "家属满意度" }
+      { icon: "单", num: "47", unit: "件", label: "本周登记" },
+      { icon: "✓", num: "3", unit: "件", label: "本周找到" },
+      { icon: "友", num: "1,284", unit: "人", label: "志愿者" },
+      { icon: "爱", num: "89%", label: "家属满意度" }
     ])}
     <div style="padding:24px 32px;background:#fff">
-      ${msAlert("info", "📋", "依据《治安管理条例》，成年人失联满7日方可在公安机关立案。本栏目为民间信息互助通道，仅登记、不承诺。")}
-      <div class="ms-section-title" style="margin:20px 0 16px">📋 本周登记（节选）</div>
+      ${msAlert("info", "单", "依据《治安管理条例》，成年人失联满7日方可在公安机关立案。本栏目为民间信息互助通道，仅登记、不承诺。")}
+      <div class="ms-section-title" style="margin:20px 0 16px">${svgIcon("clipboard")} 本周登记（节选）</div>
       <div style="display:flex;flex-direction:column;gap:12px">
         <div style="padding:18px;background:#f8f9fa;border-radius:10px;border-left:4px solid #d93025">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
@@ -2345,7 +2566,7 @@ const PAGES = {
           </div>
           <div style="display:flex;gap:14px;justify-content:center;margin-top:4px">
             <button class="btn" disabled style="opacity:.4">登 录</button>
-            <button class="btn btn-danger" data-action="hack-gov">🛠️ 漏洞利用 · SQL 注入</button>
+            <button class="btn btn-danger" data-action="hack-gov">${svgIcon("tools")} 漏洞利用 · SQL 注入</button>
           </div>
           <div class="locked-note" style="margin-top:14px">系统维护日志：默认密码已于 2066-10-01 修改，新密码已同步至各科室负责人。</div>
           <div id="hack-terminal" style="margin-top:16px;display:none"></div>
@@ -2406,12 +2627,12 @@ const PAGES = {
     </div>`);
   },
   noresult: () => browserChrome(`<div style="text-align:center;padding-top:100px;color:var(--dim)">
-      <div style="font-size:44px">🔍</div><p style="margin-top:14px">该页面不存在，或已被移除。</p></div>`),
-  filtered_promo: () => hintPage("🛡️", "搜索结果已过滤",
+      <div style="font-size:44px">${svgIcon("search")}</div><p style="margin-top:14px">该页面不存在，或已被移除。</p></div>`),
+  filtered_promo: () => hintPage("护", "搜索结果已过滤",
     "其余结果与某支付公司的营销活动有关，依据《网络信息安全管理条例》第41条已被过滤。<br>建议使用更精确的关键词重新搜索。"),
-  notfound_place: () => hintPage("📌", "未找到精确结果",
+  notfound_place: () => hintPage("标", "未找到精确结果",
     "「3号仓库」相关公开信息不足。也许你还没有找到<b>确切的地点</b>——先收集其他线索：一封旧文档里的手写注释，或地图应用里藏着的地点。<br><span style='color:#587089;font-size:11.5px'>提示：拿到确切地址后，再回来搜索即可命中。</span>"),
-  notfound_li: () => hintPage("🫥", "查无此人",
+  notfound_li: () => hintPage("匿", "查无此人",
     "公开信息中查无「李医生」相关记录。该姓名可能未在公共网络登记，或相关信息已被过滤。<br><span style='color:#587089;font-size:11.5px'>提示：随着调查深入，隐藏档案可能会以其他方式现身。</span>"),
   notfound_zhang: () => hintPage("", "公开信息极少",
     "关于「张」的公开信息极少。本地户籍系统中同名记录较多，无法进一步区分。<br><span style='color:#587089;font-size:11.5px'>提示：也许某处加密社区里有更直接的线索。</span>"),
@@ -2419,9 +2640,10 @@ const PAGES = {
     "「政务内网」后台仅对持有密码本的人开放。先去<b>天象观测站</b>（老张的据点）——老张的旧电脑里存着密码本与三份证据，拿到后再回来搜索。<br><span style='color:#587089;font-size:11.5px'>提示：D_张私信里提到的「老地方」。</span>"),
 };
 function hintPage(emoji, title, body) {
+  const ic = gic(emoji);
   return browserChrome(`
     <div class="gov-page" style="text-align:center;padding-top:70px">
-      <div style="font-size:46px">${emoji}</div>
+      <div style="font-size:46px">${ic}</div>
       <h3 style="margin:14px 0">${title}</h3>
       <p class="gov-article" style="text-align:center;max-width:520px;margin:0 auto;line-height:2">${body}</p>
       <div style="margin-top:26px"><a data-action="go-home" style="color:#7fb8d8;cursor:pointer;text-decoration:underline">← 返回搜索主页</a></div>
@@ -2522,7 +2744,7 @@ function forumThread(t) {
         <div class="fp-author"><span class="fp-name" style="font-size:12.5px">${r.author}</span><span class="fp-floor">${i + 2}楼</span></div>
         <div>${r.text}</div>
       </div>`).join("")}
-    <div class="hint-box">🧠 你读完了这个帖子。日期、地点、编号——每一个字都可能是证据。</div>
+    <div class="hint-box">${svgIcon("brain")} 你读完了这个帖子。日期、地点、编号——每一个字都可能是证据。</div>
     </div>`);
 }
 
@@ -2544,25 +2766,25 @@ function cloudHome() {
     </div>`;
   }
   const items = [
-    { id: "folder_chats", icon: "📁", name: "爸妈的聊天记录", meta: "3张截图", flag: null },
-    { id: "photo2048", icon: "🖼️", name: "2048留念.jpg", meta: "2048-06-01 · 2.4MB", flag: "e_photo" },
+    { id: "folder_chats", icon: "夹", name: "爸妈的聊天记录", meta: "3张截图", flag: null },
+    { id: "photo2048", icon: "图", name: "2048留念.jpg", meta: "2048-06-01 · 2.4MB", flag: "e_photo" },
     { id: "note", icon: "文", name: "不要相信任何人.txt", meta: "1KB", flag: "e_note" },
   ];
   return `<div class="app-root">
-    <h3 class="app-title">☁️ 星云网盘 · 共享链接</h3>
+    <h3 class="app-title"><span class="at-ic">${svgIcon("cloud")}</span>星云网盘 · 共享链接</h3>
     <div class="app-sub">分享者：星空之下 · 文件夹：线索 · 已解锁 ✓</div>
     <div class="file-crumb">共享 / <b>线索</b> / （2个文件 · 1个文件夹）</div>
     <div class="file-grid">
       ${items.map(i => `
         <div class="file-card" data-action="cloud-view" data-arg="${i.id}">
-          <div class="fc-icon">${i.icon}</div>
+          <div class="fc-icon">${gic(i.icon)}</div>
           <div class="fc-name">${i.name} ${i.flag && has(i.flag) ? "✓" : ""}</div>
           <div class="fc-meta">${i.meta}</div>
         </div>`).join("")}
     </div>
     ${prologueDone()
       ? ""
-      : `<div class="hint-box">🔎 逐一点开文件夹里的3张截图和2个文件。照片可以<b>悬停查看背面</b>，还可以<b>查看文件属性</b>（EXIF）。</div>`}
+      : `<div class="hint-box">${svgIcon("search")} 逐一点开文件夹里的3张截图和2个文件。照片可以<b>悬停查看背面</b>，还可以<b>查看文件属性</b>（EXIF）。</div>`}
   </div>`;
 }
 function prologueDone() { return has("e_chat1") && has("e_chat2") && has("e_chat3") && has("e_photo") && has("e_note"); }
@@ -2577,18 +2799,18 @@ function cloudView(id) {
   if (id === "folder_chats") {
     return `<div class="file-viewer">
       <button class="btn fv-back" data-action="cloud-home">← 返回</button>
-      <h3 style="margin:10px 0 14px">📁 爸妈的聊天记录</h3>
+      <h3 style="margin:10px 0 14px">${svgIcon("folder")} 爸妈的聊天记录</h3>
       <div style="display:flex;flex-direction:column;gap:14px">
         <div class="file-card" style="display:flex;gap:12px;align-items:center;text-align:left;border:1px solid var(--line)" data-action="cloud-view" data-arg="chat1">
-          <div class="fc-icon" style="font-size:18px;margin:0;font-weight:700">密</div>
+          <div class="fc-icon" style="font-size:18px;margin:0;font-weight:700">${svgIcon("lock")}</div>
           <div><div class="fc-name">截图1 · 林母与「中心-李医生」</div><div class="fc-meta">2066-09-20</div></div>
         </div>
         <div class="file-card" style="display:flex;gap:12px;align-items:center;text-align:left;border:1px solid var(--line)" data-action="cloud-view" data-arg="chat2">
-          <div class="fc-icon" style="font-size:26px;margin:0">💬</div>
+          <div class="fc-icon" style="font-size:26px;margin:0">${svgIcon("chat")}</div>
           <div><div class="fc-name">截图2 · 林父与「老张」</div><div class="fc-meta">2066-10-05（失踪前三天）</div></div>
         </div>
         <div class="file-card" style="display:flex;gap:12px;align-items:center;text-align:left;border:1px solid var(--line)" data-action="cloud-view" data-arg="chat3">
-          <div class="fc-icon" style="font-size:26px;margin:0">💬</div>
+          <div class="fc-icon" style="font-size:26px;margin:0">${svgIcon("chat")}</div>
           <div><div class="fc-name">截图3 · 林母与林父</div><div class="fc-meta">2066-10-07（失踪前一天）</div></div>
         </div>
       </div>
@@ -2598,7 +2820,7 @@ function cloudView(id) {
     setFlag("e_chat1");
     return `<div class="file-viewer">
       <button class="btn fv-back" data-action="cloud-view" data-arg="folder_chats">← 返回文件夹</button>
-      <h3 style="margin:10px 0 14px">💬 截图1 · 林母与「中心-李医生」（2066-09-20）</h3>
+      <h3 style="margin:10px 0 14px">${svgIcon("chat")} 截图1 · 林母与「中心-李医生」（2066-09-20）</h3>
       ${chatShot("中心-李医生", "9月20日", [
         { t: "林太太您好，我是生命延续中心评估科的李医生。北辰上个月的评估有些细节，想当面和您确认一下。" },
         { t: "李医生，是北辰的评估出问题了吗？他从小身体就很好。", me: true },
@@ -2612,7 +2834,7 @@ function cloudView(id) {
     setFlag("e_chat2");
     return `<div class="file-viewer">
       <button class="btn fv-back" data-action="cloud-view" data-arg="folder_chats">← 返回文件夹</button>
-      <h3 style="margin:10px 0 14px">💬 截图2 · 林父与「老张」（2066-10-05）</h3>
+      <h3 style="margin:10px 0 14px">${svgIcon("chat")} 截图2 · 林父与「老张」（2066-10-05）</h3>
       ${chatShot("老张", "10月5日", [
         { t: "老林，我这边也接到通知了。说我们那批问卷「存疑」，他们可能要复核原始底稿。" },
         { t: "我就知道瞒不过去。老张，你说咱们该怎么办？", me: true },
@@ -2624,7 +2846,7 @@ function cloudView(id) {
     setFlag("e_chat3");
     return `<div class="file-viewer">
       <button class="btn fv-back" data-action="cloud-view" data-arg="folder_chats">← 返回文件夹</button>
-      <h3 style="margin:10px 0 14px">💬 截图3 · 林母与林父（2066-10-07）</h3>
+      <h3 style="margin:10px 0 14px">${svgIcon("chat")} 截图3 · 林母与林父（2066-10-07）</h3>
       ${chatShot("", "10月7日", [
         { t: "明天一早就要走了。东西都收拾好了吗？", sender: "林母" },
         { t: "都好了。两张票，一个U盘。你……真的想好了？", me: true },
@@ -2639,9 +2861,9 @@ function cloudView(id) {
       <button class="btn fv-back" data-action="cloud-home">← 返回</button>
       <div class="photo-frame" data-action="toggle-photo-back">
         <div class="pf-img"><img class="pf-photo" src="assets/photo_2048.jpg" alt="2048留念.jpg"></div>
-        <div class="pf-hover-reveal">📝 照片背面（钢笔字迹）：<br><b>「2048留念。我们的第一个孩子，<br>和即将到来的第二份希望。」</b></div>
+        <div class="pf-hover-reveal">${svgIcon("note")} 照片背面（钢笔字迹）：<br><b>「2048留念。我们的第一个孩子，<br>和即将到来的第二份希望。」</b></div>
       </div>
-      <div class="pf-hint">🖱️ 悬停照片查看背面 ·
+      <div class="pf-hint">${svgIcon("mouse")} 悬停照片查看背面 ·
         <a data-action="cloud-exif" style="color:#7fb8d8;cursor:pointer;text-decoration:underline">查看文件属性（EXIF）</a></div>
       <div id="exif-box"></div>
     </div>`;
@@ -2679,15 +2901,15 @@ function remoteScreen() {
     <div class="remote-screen" style="flex:1">
       <div class="remote-walltag">LIN-PC · 桌面 · 用户：林某（城市规划局）· 分辨率 1920×1080</div>
       <div class="remote-desktop-grid">
-      <div class="remote-folder" data-action="remote-view" data-arg="work"><div class="rf-icon">📁</div><div class="rf-name">工作文档</div></div>
-      <div class="remote-folder" data-action="remote-view" data-arg="photos"><div class="rf-icon">🖼️</div><div class="rf-name">家庭相册</div></div>
-      <div class="remote-folder" data-action="remote-folder2"><div class="rf-icon">密</div><div class="rf-name" style="color:var(--warn)">保险箱</div></div>
-      <div class="remote-folder" data-action="remote-view" data-arg="recycle"><div class="rf-icon">回</div><div class="rf-name">回收站</div></div>
+      <div class="remote-folder" data-action="remote-view" data-arg="work"><div class="rf-icon">${svgIcon("folder")}</div><div class="rf-name">工作文档</div></div>
+      <div class="remote-folder" data-action="remote-view" data-arg="photos"><div class="rf-icon">${svgIcon("photo")}</div><div class="rf-name">家庭相册</div></div>
+      <div class="remote-folder" data-action="remote-folder2"><div class="rf-icon">${svgIcon("lock")}</div><div class="rf-name" style="color:var(--warn)">保险箱</div></div>
+      <div class="remote-folder" data-action="remote-view" data-arg="recycle"><div class="rf-icon">${svgIcon("recycle")}</div><div class="rf-name">回收站</div></div>
       </div>
     </div>
     <div class="remote-dock">
-      <span class="rd-item" title="发送文件（只读会话不可用）">📤 传输</span>
-      <span class="rd-item" title="剪贴板同步">📋 剪贴板</span>
+      <span class="rd-item" title="发送文件（只读会话不可用）">${svgIcon("send")} 传输</span>
+      <span class="rd-item" title="剪贴板同步">${svgIcon("clipboard")} 剪贴板</span>
       <span class="rd-item" title="远程聊天">聊天</span>
       <span class="rd-item" title="录制会话">⏺ 录制</span>
       <span class="rd-spacer"></span>
@@ -2720,9 +2942,9 @@ function remotePhotos() {
     <div class="remote-screen" style="flex:1">
       <button class="btn" style="margin-bottom:14px" data-action="remote-desktop">← 返回桌面</button>
       <div>
-        <div class="remote-folder" data-action="remote-view" data-arg="photo1"><div class="rf-icon">🖼️</div><div class="rf-name">婴儿床.jpg<br><span style="font-size:10px;color:var(--dim)">2048</span></div></div>
-        <div class="remote-folder" data-action="remote-view" data-arg="photo2"><div class="rf-icon">🎠</div><div class="rf-name">旋转木马.jpg<br><span style="font-size:10px;color:var(--dim)">2058</span></div></div>
-        <div class="remote-folder" data-action="remote-view" data-arg="photo3"><div class="rf-icon">🪞</div><div class="rf-name">全家福.jpg<br><span style="font-size:10px;color:var(--dim)">2064</span></div></div>
+        <div class="remote-folder" data-action="remote-view" data-arg="photo1"><div class="rf-icon">${svgIcon("photo")}</div><div class="rf-name">婴儿床.jpg<br><span style="font-size:10px;color:var(--dim)">2048</span></div></div>
+        <div class="remote-folder" data-action="remote-view" data-arg="photo2"><div class="rf-icon">${svgIcon("carousel")}</div><div class="rf-name">旋转木马.jpg<br><span style="font-size:10px;color:var(--dim)">2058</span></div></div>
+        <div class="remote-folder" data-action="remote-view" data-arg="photo3"><div class="rf-icon">${svgIcon("mirror")}</div><div class="rf-name">全家福.jpg<br><span style="font-size:10px;color:var(--dim)">2064</span></div></div>
       </div>
     </div>
   </div>`;
@@ -2742,9 +2964,9 @@ function remotePhoto(v) {
     inner = `
       <div class="photo-frame" data-action="toggle-photo-back"><div class="pf-img" style="height:220px">
         <img class="pf-photo" src="assets/photo_merrygo.jpg" alt="旋转木马.jpg">
-        <div class="pf-hover-reveal">📝 照片背面：<br><b>「哥哥和弟弟，希望你们永远在一起。——妈妈」</b></div>
+        <div class="pf-hover-reveal">${svgIcon("note")} 照片背面：<br><b>「哥哥和弟弟，希望你们永远在一起。——妈妈」</b></div>
       </div></div>
-      <div class="pf-hint">🖱️ 悬停查看背面 · 10岁，旋转木马。一个笑得开心（A），一个面无表情地看着镜头（B）。</div>
+      <div class="pf-hint">${svgIcon("mouse")} 悬停查看背面 · 10岁，旋转木马。一个笑得开心（A），一个面无表情地看着镜头（B）。</div>
   `;
   } else {
     inner = `
@@ -2768,9 +2990,9 @@ function remoteSafeInside() {
     <div class="remote-screen" style="flex:1">
       <button class="btn" style="margin-bottom:14px" data-action="remote-desktop">← 返回桌面</button>
       <div style="display:flex;gap:22px;flex-wrap:wrap;margin-bottom:16px">
-        <div class="remote-folder" style="cursor:default"><div class="rf-icon">💵</div><div class="rf-name">现金<br><span style="font-size:10px;color:var(--dim)">约5000星元</span></div></div>
-        <div class="remote-folder" data-action="remote-view" data-arg="usbA"><div class="rf-icon">🔌</div><div class="rf-name" style="color:var(--warn)">U盘 A<br><span style="font-size:10px;color:var(--dim)">加密</span></div></div>
-        <div class="remote-folder" data-action="remote-view" data-arg="usbB"><div class="rf-icon">🔌</div><div class="rf-name">U盘 B</div></div>
+        <div class="remote-folder" style="cursor:default"><div class="rf-icon">${svgIcon("cash")}</div><div class="rf-name">现金<br><span style="font-size:10px;color:var(--dim)">约5000星元</span></div></div>
+        <div class="remote-folder" data-action="remote-view" data-arg="usbA"><div class="rf-icon">${svgIcon("usb")}</div><div class="rf-name" style="color:var(--warn)">U盘 A<br><span style="font-size:10px;color:var(--dim)">加密</span></div></div>
+        <div class="remote-folder" data-action="remote-view" data-arg="usbB"><div class="rf-icon">${svgIcon("usb")}</div><div class="rf-name">U盘 B</div></div>
       </div>
       <div class="txt-file">一张纸条：
 
@@ -2788,7 +3010,7 @@ function remoteUsbALocked() {
       <div style="font-size:26px;margin:30px 0 14px;font-weight:700;letter-spacing:3px">密码保险箱</div>
       <div style="font-size:14px;color:var(--warn);letter-spacing:2px">此U盘已被加密</div>
       <div class="locked-note" style="margin-top:10px">内容已全部加密。没有密码，你只能看到这一把锁。</div>
-      <button class="btn btn-primary" style="margin-top:22px" data-action="remote-view" data-arg="usbA">🔑 输入密码解密</button>
+      <button class="btn btn-primary" style="margin-top:22px" data-action="remote-view" data-arg="usbA">${svgIcon("key")} 输入密码解密</button>
     </div>
   </div>`;
 }
@@ -2844,7 +3066,7 @@ function remoteRecycle() {
     <div class="remote-screen" style="flex:1">
       <button class="btn" style="margin-bottom:14px" data-action="remote-desktop">← 返回桌面</button>
       <div class="file-card" style="display:inline-flex;gap:12px;align-items:center;border:1px dashed #8a2a3a" data-action="restore-letter">
-        <div class="fc-icon" style="font-size:22px;margin:0;font-weight:700">删</div>
+        <div class="fc-icon" style="font-size:22px;margin:0;font-weight:700">${svgIcon("close")}</div>
         <div><div class="fc-name">「给北辰的信」（已删除）</div><div class="fc-meta">删除于 10月7日 23:58 · 点击恢复</div></div>
       </div>
       <div id="letter-box">${has("letter_read") ? letterHtml() : ""}</div>
@@ -2878,14 +3100,15 @@ function chatHtml() {
     controls = `
       <button class="btn btn-primary" data-action="chat-choice" data-arg="open">让他开门，和「小林B」谈谈</button>
       <button class="btn btn-danger" data-action="chat-choice" data-arg="lock">让他锁好门，不要回应</button>`;
-  }
-  if (has("ch3_chose") && !has("b_letter")) {
+  } else if (has("ch3_chose") && !has("b_letter")) {
     controls = `<button class="btn btn-primary" data-action="chat-letter-done">读完这封信</button>`;
+  } else if (has("remote_granted") && !has("safe_opened") && !has("safe_asked")) {
+    controls = `<button class="btn btn-primary" data-action="chat-ask-safe">问北辰：保险箱密码提示</button>`;
   }
   return `<div class="chat-app tg">
     <div class="chat-head tg-head">
       <div class="ch-info"><div class="ch-name">加密用户BC</div><div class="ch-status"><span class="dot-live"></span> 在线 · 端到端加密</div></div>
-      <div class="ch-actions"><span title="语音通话">话</span><span title="视频通话">视</span><span title="菜单">⋯</span></div>
+      <div class="ch-actions"><span title="语音通话">${svgIcon("phone")}</span><span title="视频通话">${svgIcon("video")}</span><span title="菜单">⋯</span></div>
     </div>
     <div class="chat-scroll tg-scroll" id="chat-scroll">
       <div class="chat-day">2066年10月</div>
@@ -2953,7 +3176,7 @@ function streetViewHtml() {
       <img src="assets/Aurora.png" alt="极光网络会所旧址" referrerpolicy="no-referrer" style="width:100%;height:100%;object-fit:cover;display:block">
     </div>
     <div class="pf-hint">「极光网络会所」，2011年停业。招牌上的电话，最后一位被人刮掉了。</div>
-    ${done ? `<div class="hint-box">✅ 已拨通：最后一位是 <b>6</b>。自动应答的录音已存入语音助手（星灵）——邀请码就藏在里面。</div>` : `
+    ${done ? `<div class="hint-box">✓ 已拨通：最后一位是 <b>6</b>。自动应答的录音已存入语音助手（星灵）——邀请码就藏在里面。</div>` : `
     <div class="phone-panel">
       <div style="font-size:12px;color:var(--dim);margin-bottom:8px">补全最后一位并拨号（0-9 逐个试）</div>
       <div class="phone-num">6270 0835 ${dialed || "_"}</div>
@@ -2978,7 +3201,7 @@ function idScreen() {
   </div>`;
   const tabs = `<div class="db-tabs">
     <button class="db-tab ${mode === "press" ? "on" : ""}" data-action="id-mode" data-arg="press">记者权限</button>
-    ${has("backdoor_available") ? `<button class="db-tab ${mode === "backdoor" ? "on" : ""}" data-action="id-mode" data-arg="backdoor">🕳️ 隐蔽后门（北辰B提供）</button>` : ""}
+    ${has("backdoor_available") ? `<button class="db-tab ${mode === "backdoor" ? "on" : ""}" data-action="id-mode" data-arg="backdoor">${svgIcon("backdoor")} 隐蔽后门（北辰B提供）</button>` : ""}
   </div>`;
   if (mode === "press") {
     if (!S.ui.id.pressLogged) {
@@ -3064,13 +3287,13 @@ function idScreen() {
         </tbody>
       </table>
     </div>
-    <button class="btn btn-primary" data-action="arch-recheck">📂 调出「复核申请」通道</button>
+    <button class="btn btn-primary" data-action="arch-recheck">${svgIcon("folder")} 调出「复核申请」通道</button>
     ${S.ui.id.recheck ? `
       <div class="divider"></div>
-      <div class="db-alert">🔍 隐藏窗口发现：复核通道下挂载了一段未归档录音，标注为「李医生_自述」。</div>
+      <div class="db-alert">${svgIcon("search")} 隐藏窗口发现：复核通道下挂载了一段未归档录音，标注为「李医生_自述」。</div>
       ${S.ui.id.tapeDecrypted ? `
       <div class="cassette" data-action="play-li-tape">
-        <div class="cs-icon" style="font-weight:700">声</div>
+        <div class="cs-icon" style="font-weight:700">${svgIcon("mic")}</div>
         <div><div style="font-size:14px">李医生_自述.wav</div><div style="font-size:11px;color:#5f7ea8;font-family:var(--mono)">时长 01:12 · 未归档 · 点击播放</div></div>
       </div>
       <div id="tape-box"></div>` : `
@@ -3079,7 +3302,7 @@ function idScreen() {
         <div style="font-size:11.5px;color:var(--dim);margin-bottom:12px">密文 ██▓▒░ …… 无法直接播放。这条录音本是通过地下渠道流转出来的——用你当初进暗涌时那扇门的数字打开它。</div>
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
           <input id="tape-dec-key" placeholder="输入4位密钥" maxlength="4" inputmode="numeric" autocomplete="off" style="width:150px;background:#0e0e0a;border:1px solid #243040;color:#9fd0ff;padding:9px 12px;border-radius:6px;font-family:var(--mono,monospace);letter-spacing:4px;text-align:center">
-          <button class="btn btn-primary" data-action="dec-tape">🔓 解密此录音</button>
+          <button class="btn btn-primary" data-action="dec-tape">${svgIcon("unlock")} 解密此录音</button>
         </div>
         <div id="tape-dec-err" style="color:#ff8a8a;font-size:12.5px;margin-top:8px;min-height:18px"></div>
       </div>`}
@@ -3109,7 +3332,7 @@ function liTapeHtml() {
 
 function govHackResult() {
   const plainDoc = `<div style="background:#0a120c;padding:18px 22px;border-radius:8px;border:1px solid #1e3a28;font-size:13px;line-height:2.2;color:#dce9f4;word-break:break-word;overflow-wrap:anywhere;max-width:100%">
-        <b style="color:var(--warn)">📄 双子计划_实施方案_2048.docx</b><br>
+        <b style="color:var(--warn)">${svgIcon("file")} 双子计划_实施方案_2048.docx</b><br>
         <span style="color:#7f93aa">密级：内部公开 · 仅限科级以上</span><br><br>
         <b>一、项目背景</b><br>
         全球人口认知水平持续下滑，2040-2048年累计下降31%。现有医疗手段无法逆转。经国务院（星都特别行政区）批准，自2048年起试行"双子备份计划"。<br><br>
@@ -3131,10 +3354,10 @@ function govHackResult() {
     <div class="gov-page">
       <div class="web-header"><h2>星都政务内网 · 已获取敏感文件</h2><span class="wh-url">gov.xd.net/admin</span></div>
       <div class="gov-banner" style="background:linear-gradient(90deg,#3a2a1a,#1a120a);border-color:#8a6a2a;">
-        ⚠️ 越权访问成功，但目标文件已被 AES-256 加密
+        警 越权访问成功，但目标文件已被 AES-256 加密
       </div>
       <div style="background:#0e0e0a;padding:18px 22px;border-radius:8px;border:1px solid #3a3018;font-size:13px;line-height:2;color:#cdbd82;font-family:var(--mono,monospace)">
-        <b style="color:#d8b860">📄 双子计划_实施方案_2048.docx</b><br>
+        <b style="color:#d8b860">${svgIcon("file")} 双子计划_实施方案_2048.docx</b><br>
         <span style="color:#a29468">密级：内部公开 · 已加密 · 尝试离线破解…</span><br><br>
         ██ ▓▓ █░ █▒▒ ▓░█ ▒░█ ▓▓ █░ ▒▒█ ░█▓ ▒▓░ █▒░ ▓█░ ▒▓░ █░█ ▒▓░ █▒ ░▒ █░ ▓▒ █░<br>
         ▒░█ ▓░█ ▒▓░ █▒░ ▓█░ ▒▓░ █░█ ▒▓░ █▒ ░▒ █░ ▓▒ █░ █▒░ ▓█░ ▒▓░ █░█ ▒▓░ █▒ ░▒
@@ -3160,7 +3383,7 @@ function govHackResult() {
     <div class="gov-page">
       <div class="web-header"><h2>星都政务内网 · 已获取敏感文件</h2><span class="wh-url">gov.xd.net/admin</span></div>
       <div class="gov-banner" style="background:linear-gradient(90deg,#1a2a1a,#0a1a0a);border-color:#2a6a3a;">
-        ✅ 越权访问成功 · 文件已用密码本解密并缓存至本地
+        ✓ 越权访问成功 · 文件已用密码本解密并缓存至本地
       </div>
       ${plainDoc}
     </div>
@@ -3202,15 +3425,15 @@ function obsPcHome() {
       <div class="gov-article">
         <div style="display:flex;flex-direction:column;gap:12px;margin-top:14px">
           <div class="file-card" style="display:flex;gap:12px;align-items:center;text-align:left;border:1px solid var(--line);cursor:pointer" data-action="obs-file" data-arg="diary">
-            <div class="fc-icon" style="font-size:26px;margin:0">📓</div>
+            <div class="fc-icon" style="font-size:26px;margin:0">${svgIcon("note")}</div>
             <div><div class="fc-name">老张_日记.txt ${has("obs_diary") ? "✓" : ""}</div><div class="fc-meta">2066-09-15 至 2066-10-13 · 最后修改于失踪前夜</div></div>
           </div>
           <div class="file-card" style="display:flex;gap:12px;align-items:center;text-align:left;border:1px solid var(--line);cursor:pointer" data-action="obs-file" data-arg="bribe">
-            <div class="fc-icon" style="font-size:26px;margin:0">📊</div>
+            <div class="fc-icon" style="font-size:26px;margin:0">${svgIcon("table")}</div>
             <div><div class="fc-name">评估员往来记录.csv ${has("obs_bribe") ? "✓" : ""}</div><div class="fc-meta">三名评估员 · 2064-2066 · 金额与对应孩子编号</div></div>
           </div>
           <div class="file-card" style="display:flex;gap:12px;align-items:center;text-align:left;border:1px solid var(--line);cursor:pointer" data-action="obs-file" data-arg="warehouse_map">
-            <div class="fc-icon" style="font-size:26px;margin:0">🗺️</div>
+            <div class="fc-icon" style="font-size:26px;margin:0">${svgIcon("photo")}</div>
             <div><div class="fc-name">3号仓库_内部结构图.png ${has("obs_map") ? "✓" : ""}</div><div class="fc-meta">手绘 · 标注牢房区/监控室/配电室/货运月台</div></div>
           </div>
         </div>
@@ -3224,7 +3447,7 @@ function obsDiary() {
   if (!inbox.some(m => m.id === "m_gov_lead")) deliverMail("gov_lead", 900);
   return browserChrome(`
     <div class="gov-page">
-      <div class="web-header"><h2>📓 老张_日记.txt</h2><span class="wh-url">ZHANG-PC · 桌面</span></div>
+      <div class="web-header"><h2>${svgIcon("note")} 老张_日记.txt</h2><span class="wh-url">ZHANG-PC · 桌面</span></div>
       <div class="txt-file" style="font-size:13px;line-height:2.2">
 <b>2066-09-15</b>
 他们通知我了。我儿子的评估报告「存疑」，要复查。我知道这是什么意思——老林跟我说过，中心里有个李医生，只要给钱，就能把一个健康的孩子写成「反社会」。我没给钱。我给不起。
@@ -3256,7 +3479,7 @@ function obsBribe() {
   setFlag("obs_bribe");
   return browserChrome(`
     <div class="gov-page">
-      <div class="web-header"><h2>📊 评估员往来记录.csv</h2><span class="wh-url">ZHANG-PC · 桌面</span></div>
+      <div class="web-header"><h2>${svgIcon("table")} 评估员往来记录.csv</h2><span class="wh-url">ZHANG-PC · 桌面</span></div>
       <div class="gov-article">
         <p style="font-size:12px;color:#587089">老张从中心内部渠道获得的转账记录摘要。所有金额单位：星元。</p>
         <table style="width:100%;border-collapse:collapse;font-size:12.5px;margin-top:10px">
@@ -3286,7 +3509,7 @@ function obsWarehouseMap() {
   setFlag("obs_map");
   return browserChrome(`
     <div class="gov-page">
-      <div class="web-header"><h2>🗺️ 3号仓库_内部结构图.png</h2><span class="wh-url">ZHANG-PC · 桌面 · 手绘</span></div>
+      <div class="web-header"><h2>${svgIcon("photo")} 3号仓库_内部结构图.png</h2><span class="wh-url">ZHANG-PC · 桌面 · 手绘</span></div>
       <div class="gov-article">
         <p style="font-size:12px;color:#8fb4d8">老张手绘的仓库内部布局，已扫描存档。</p>
         <img src="assets/3号仓库_内部结构图.png" alt="3号仓库内部结构图" style="width:100%;max-width:640px;border-radius:10px;border:1px solid #2a4a3a;display:block;margin:14px 0">
@@ -3300,12 +3523,12 @@ function obsWarehouseMap() {
 function cmsScreen() {
   const tab = S.ui.cms.tab;
   const tipsHtml = `
-    <div class="cms-section-title">📨 收件箱（线报）</div>
+    <div class="cms-section-title">${svgIcon("letter")} 收件箱（线报）</div>
     <div class="tip-card">
       <div class="tc-subject">【求助】我的父母消失了</div>
       <div class="tc-meta">发件：星空之下 &lt;xingkongzhixia@freemail.xyz&gt; · 2066-10-12 09:23</div>
       <div class="tc-body">我叫林北辰，今年18岁。我的父母四天前说要去临港市参加交流会，但两张高铁票的座位号是空的——他们根本没有上车。有个穿黑西装的男人在楼下打听我父母……</div>
-      <div style="margin-top:10px"><button class="btn" data-action="open-mail-from-cms">✉️ 在邮箱中查看并回复</button></div>
+      <div style="margin-top:10px"><button class="btn" data-action="open-mail-from-cms">${svgIcon("letter")} 在邮箱中查看并回复</button></div>
     </div>
     <div class="tip-card" style="opacity:.5;border-left-color:var(--line)">
       <div class="tc-subject">智慧城市便民措施采访提纲（陈姐指派）</div>
@@ -3313,7 +3536,7 @@ function cmsScreen() {
       <div class="tc-body">采访智慧公交、无人配送、AI政务窗口三个点。（你大概已经顾不上这个了。）</div>
     </div>`;
   const draftsHtml = `
-    <div class="cms-section-title">📝 草稿箱</div>
+    <div class="cms-section-title">${svgIcon("note")} 草稿箱</div>
     <div class="editor-area" style="opacity:.75">
       <input value="星都便民设施调查（未完成）" readonly>
       <textarea readonly>第一节：智慧公交——目前已采访2位司机……
@@ -3324,7 +3547,7 @@ function cmsScreen() {
   const bribeExtra = has("obs_bribe") ? `\n\n补充证据：评估科三名医生（李某某、王某某、赵某某）在2064-2066年间收受贿赂共计470,000星元，篡改至少5名青少年的评估分数。其中林北辰B的父母拒绝行贿，但孩子的心理评分仍被从90分强行降至35分。` : "";
   const mapExtra = has("obs_map") ? `\n\n3号仓库内部结构图已附：牢房区8间、监控室4路信号、配电室总闸可切断全仓电源、货运月台为唯一出入口。` : "";
   const editorHtml = `
-    <div class="cms-section-title">✍️ 深度报道编辑器</div>
+    <div class="cms-section-title">${svgIcon("pen")} 深度报道编辑器</div>
     <div class="editor-area">
       <input id="cms-title" value="《星都观察者》深度 | 代号「双子」：谁替我们的孩子决定了生死？" ${canPublish ? "" : "readonly"}>
       <textarea ${canPublish ? "" : "readonly"}>2066年，星都市。每个家庭都会迎来两个一模一样的孩子——一个是生的，一个是「培育」的。18岁那年，一场名为「成人礼」的测试将决定谁留下，谁「赴海外深造」。
@@ -3334,13 +3557,13 @@ function cmsScreen() {
 全部物证：原始评估档案A/B、李医生自述录音、林父邮件往来、母体档案库截图。${bribeExtra}${mapExtra}</textarea>
       <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:12px">
         ${canPublish
-          ? `<button class="btn btn-danger" data-action="publish-report">🚨 发布报道（全网推送）</button>`
-          : `<button class="btn" disabled>🔒 编辑器锁定 —— 最终抉择后解锁</button>`}
+          ? `<button class="btn btn-danger" data-action="publish-report">${svgIcon("alert")} 发布报道（全网推送）</button>`
+          : `<button class="btn" disabled>${svgIcon("lock")} 编辑器锁定 —— 最终抉择后解锁</button>`}
       </div>
     </div>`;
   return `<div class="app-root">
     <div class="cms-header">
-      <div class="cms-logo">📰 星都<em>观察者</em> · 后台</div>
+      <div class="cms-logo">${svgIcon("report")} 星都<em>观察者</em> · 后台</div>
       <div class="cms-role">沈砚 · 实习记者 · 我的工位</div>
     </div>
     <div style="display:flex;gap:10px">
@@ -3358,7 +3581,7 @@ function voiceHtml() {
   const sel = avail.find(e => e.id === S.ui.voice.sel) || null;
   const opts = (cur) => avail.map(e => `<option value="${e.id}" ${cur === e.id ? "selected" : ""}>${e.name}</option>`).join("");
   return `<div class="app-root">
-    <h3 class="app-title">🎙️ 语音助手 · 星灵</h3>
+    <h3 class="app-title"><span class="at-ic">${svgIcon("mic")}</span>语音助手 · 星灵</h3>
     <div class="app-sub">采访录音与线索语音 · 共 ${avail.length} 条可用</div>
     <div class="voice-privacy">为保护隐私，原声已加密存储，仅供星灵AI声纹分析。播放声音为星灵AI生成</div>
     <div class="voice-list">
@@ -3440,21 +3663,21 @@ function objectiveList() {
 }
 function objectivesHtml() {
   if (S.difficulty !== "easy") {
-    return `<h3 class="app-title">◎ 任务目标</h3>
+    return `<h3 class="app-title"><span class="at-ic">${svgIcon("target")}</span>任务目标</h3>
     <div class="app-sub">普通难度</div>
-    <div class="hint-box" style="border-left-color:#8a6a2a;background:rgba(255,180,84,.06);color:#d8b98a">🔇 普通难度不提供任务目标与提示。<br>线索要靠你自己拼——卡住时，桌面同目录下的《星都双子》完整攻略.docx 就是你的任务清单。</div>`;
+    <div class="hint-box" style="border-left-color:#8a6a2a;background:rgba(255,180,84,.06);color:#d8b98a">${svgIcon("mute")} 普通难度不提供任务目标与提示。<br>线索要靠你自己拼——卡住时，桌面同目录下的《星都双子》完整攻略.docx 就是你的任务清单。</div>`;
   }
   const list = objectiveList()
     .filter(i => i.done || i.current)
     .map(i =>
     `<li class="${i.done ? "done" : ""} ${i.current ? "current" : ""}">${i.text}</li>`).join("");
   const extra = (has("truth_known") && !has("game_over") && !has("choice_route1"))
-    ? `<button class="btn btn-danger" style="width:100%;margin-top:12px" data-action="show-choice">⚖️ 做出最终选择</button>` : "";
-  return `<h3 class="app-title">◎ 任务目标</h3>
+    ? `<button class="btn btn-danger" style="width:100%;margin-top:12px" data-action="show-choice">${svgIcon("scale")} 做出最终选择</button>` : "";
+  return `<h3 class="app-title"><span class="at-ic">${svgIcon("target")}</span>任务目标</h3>
     <div class="app-sub">当前：${esc(objectiveText())}</div>
     <ul class="obj-list">${list}</ul>
     ${extra}
-    <div class="hint-box">💡 卡住时可以：多搜索几个关键词 / 查看邮件附件 / 打开语音助手听录音 / 找北辰聊聊。</div>`;
+    <div class="hint-box">${svgIcon("spark")} 卡住时可以：多搜索几个关键词 / 查看邮件附件 / 打开语音助手听录音 / 找北辰聊聊。</div>`;
 }
 function renderObjectives() {
   const ot = $("#objective-text");
@@ -3476,7 +3699,7 @@ function closeModal() { $("#modal-layer").classList.add("hidden"); }
 function passwordModal(opt) {
   openModal(`
     <div class="pass-box">
-      <h3>🔐 ${opt.title}</h3>
+      <h3>${svgIcon("lock")} ${opt.title}</h3>
       <div class="pass-hint">${opt.hint}</div>
       <div class="pass-input">
         <input id="pass-input" placeholder="${opt.placeholder || "输入密码"}" autocomplete="off" ${opt.numeric ? 'inputmode="numeric"' : ""}>
@@ -3503,7 +3726,7 @@ function tryPassword() {
     const el = $("#pass-error");
     if (el) {
       el.textContent = "密码错误。再想想提示。";
-      if (S._passTries >= 4 && S._passForceHint) el.innerHTML = "💡 强力提示：" + S._passForceHint;
+      if (S._passTries >= 4 && S._passForceHint) el.innerHTML = "提 强力提示：" + S._passForceHint;
     }
   }
 }
@@ -3639,7 +3862,7 @@ function showNewsburst(titleText) {
     <div class="nb-tv">
       <div class="nb-bar"><span class="nb-live">● 直播插播</span><span style="font-size:13px;color:#ffd7dc">全城紧急新闻</span><span class="nb-chan">星都都市频道 · XDTV-1</span></div>
       <div class="nb-body">
-        <div class="nb-tag">🚨 突发 · 证据已核实</div>
+        <div class="nb-tag">${svgIcon("alert")} 突发 · 证据已核实</div>
         <div class="nb-title">${esc(title)}</div>
         <div class="nb-sub">发布者：《星都观察者》实习记者 · 发布于 2066-10-15 00:12 · 全网推送中</div>
         <div class="nb-metrics">
@@ -3765,7 +3988,7 @@ function onFlag(f) {
       deliverMail("witness", 13000);
       break;
     case "prologue_done":
-      setTimeout(() => toast("📬 线索初步汇总", "五条线索都看完了。回到<b>邮箱客户端</b>，回复北辰。", ""), 600);
+      setTimeout(() => toast("邮 线索初步汇总", "五条线索都看完了。回到<b>邮箱客户端</b>，回复北辰。", ""), 600);
       break;
     case "remote_granted":
       setClockDate("2066-10-12"); setClock("14:40");
@@ -3775,18 +3998,18 @@ function onFlag(f) {
       renderIcons();
       break;
     case "exif_checked":
-      setTimeout(() => toast("📷 EXIF属性", "拍摄坐标：北纬39°54′，东经116°23′——试试搜索这组坐标，或直接搜「红星路」。", "warn"), 500);
+      setTimeout(() => toast("图 EXIF属性", "拍摄坐标：北纬39°54′，东经116°23′——试试搜索这组坐标，或直接搜「红星路」。", "warn"), 500);
       break;
     case "map_34":
-      setTimeout(() => toast("🗺️ 星途地图", "老城区红星路34号已标记在地图上，去<b>星途</b>打开街景看看。", "", () => openApp("map")), 700);
+      setTimeout(() => toast("图 星途地图", "老城区红星路34号已标记在地图上，去<b>星途</b>打开街景看看。", "", () => openApp("map")), 700);
       break;
     case "invite_known":
-      setTimeout(() => toast("☎️ 拨通了", "自动应答录音已存入星灵：邀请码是——<b>二零四八</b>。", ""), 500);
+      setTimeout(() => toast("话 拨通了", "自动应答录音已存入星灵：邀请码是——<b>二零四八</b>。", ""), 500);
       if (S.windows.voice) refreshApp("voice");
       break;
     case "video_watched":
       if (S.windows.voice) refreshApp("voice");
-      setTimeout(() => toast("🎬 新语音", "《B_契约.mp4》音轨已存入星灵——拿去和北辰的语音做声纹比对。", "warn", null, 6000), 600);
+      setTimeout(() => toast("影 新语音", "《B_契约.mp4》音轨已存入星灵——拿去和北辰的语音做声纹比对。", "warn", null, 6000), 600);
       break;
     case "ch1_done":
       setClockDate("2066-10-13"); setClock("20:15");
@@ -3795,8 +4018,8 @@ function onFlag(f) {
       break;
     case "dm_read":
       setClockDate("2066-10-14"); setClock("18:00");
-      toast("🔭 主线 · 天象观测站", "D_张提到的「老地方」——市郊天象观测站。老张的旧电脑里存着密码本与三份证据，先去那里。在星途地图上点击标记，或搜索「天象观测站」。", "warn", () => openApp("map"), 9000);
-      setTimeout(() => toast("🌐 星搜 · 政务内网", "拿到密码本后，搜索「政务内网」入侵政府后台，解开《双子计划_实施方案_2048.docx》。", "", () => openApp("browser"), 12000), 3000);
+      toast("望 主线 · 天象观测站", "D_张提到的「老地方」——市郊天象观测站。老张的旧电脑里存着密码本与三份证据，先去那里。在星途地图上点击标记，或搜索「天象观测站」。", "warn", () => openApp("map"), 9000);
+      setTimeout(() => toast("网 星搜 · 政务内网", "拿到密码本后，搜索「政务内网」入侵政府后台，解开《双子计划_实施方案_2048.docx》。", "", () => openApp("browser"), 12000), 3000);
       break;
     case "gov_decrypted":
       showChapter("第三章：双重人格",
@@ -3812,7 +4035,7 @@ function onFlag(f) {
         setTimeout(() => chatPush("them", "对不起，我刚才想说什么来着……算了，当我没说。", "加密用户BC"), 3500);
         setTimeout(() => chatPush("alarm", "【短信 · 陌生号码】开门"), 4500);
         setTimeout(() => {
-          toast("💬 加密频道 · 紧急", "加密用户BC：他回来了！他就在楼下！——快打开加密频道！", "danger", () => openApp("chat"));
+          toast("讯 加密频道 · 紧急", "加密用户BC：他回来了！他就在楼下！——快打开加密频道！", "danger", () => openApp("chat"));
           renderIcons();
         }, 5000);
       }, 2600);
@@ -3843,18 +4066,18 @@ function showChoice() {
   if (has("game_over") || has("choice_route1")) return;
   openModal(`
     <div class="choice-box">
-      <h3>⚖️ 最后的抉择</h3>
+      <h3>${svgIcon("scale")} 最后的抉择</h3>
       <div class="cb-sub">10月14日，深夜。你手上有全部的真相。记者，你选哪一条路？</div>
       <div class="choice-item" data-action="choose-1">
-        <div class="ci-title">📰 发布新闻 —— 曝光一切</div>
+        <div class="ci-title">${svgIcon("report")} 发布新闻 —— 曝光一切</div>
         <div class="ci-desc">把评估报告、录音、论坛截图、林父邮件整理成深度报道，立即发布。让全城的光照进3号仓库——但「转运」就在今晚，舆论跑得过警笛吗？</div>
       </div>
       <div class="choice-item" data-action="choose-2">
-        <div class="ci-title">🖥️ 支援小林B —— 现场营救</div>
+        <div class="ci-title">${svgIcon("monitor")} 支援小林B —— 现场营救</div>
         <div class="ci-desc">不报道。入侵仓库监控系统，帮他关掉警报、指引路线。你将是他在黑暗里唯一的眼睛。</div>
       </div>
       <div class="choice-item" data-action="choose-3">
-        <div class="ci-title">🌑 隐藏证据 —— 保全小林A</div>
+        <div class="ci-title">${svgIcon("moon")} 隐藏证据 —— 保全小林A</div>
         <div class="ci-desc">删除一切。让北辰A忘掉所有事，作为「优选体」安全地活下去——代价是让另一个孩子，连同真相一起消失。</div>
       </div>
     </div>`);
@@ -3887,7 +4110,7 @@ function refreshApp(appId) {
 function docReaderHtml() {
   return `<div class="app-root doc-reader">
     <div class="doc-toolbar">
-      <span class="doc-file">📄 城中村拆迁手记_试读版.docx</span>
+      <span class="doc-file">${svgIcon("file")} 城中村拆迁手记_试读版.docx</span>
       <span class="doc-tag">未刊稿 · 试读</span>
     </div>
     <div class="doc-page">
@@ -3935,7 +4158,7 @@ function mailHtml() {
   }
   return `<div class="mail-layout">
     <div class="mail-list">
-      <div class="mail-search"><input id="mail-filter" placeholder="🔍 搜索邮件（如：双子 / 销毁 / 北辰）" value="${esc(S.ui.mail.filter)}"></div>
+      <div class="mail-search">${svgIcon("search")}<input id="mail-filter" placeholder="搜索邮件（如：双子 / 销毁 / 北辰）" value="${esc(S.ui.mail.filter)}"></div>
       ${list.map(m => `
       <div class="mail-item ${m.unread ? "unread" : ""} ${sel && sel.id === m.id ? "selected" : ""}" data-action="mail-select" data-arg="${m.id}">
         <div class="mi-from">${esc(m.from)}</div>
@@ -4020,11 +4243,11 @@ document.addEventListener("click", (e) => {
         S.started = true;
         setClockDate("2066-10-12"); setClock("09:23");
         renderIcons(); renderObjectives();
-        toast("🎮 难度：" + (S.difficulty === "easy" ? "简单" : "普通"),
+        toast("游 难度：" + (S.difficulty === "easy" ? "简单" : "普通"),
           S.difficulty === "easy"
             ? "右侧会显示任务目标，闲置时还有提示。祝你查案顺利。"
             : "任务目标与提示已全部关闭。这座城市的水面之下，只能靠你自己了。", "warn", null, 9000);
-        setTimeout(() => toast("✉️ 新邮件", "<b>星空之下（匿名）</b>：【求助】我的父母消失了", "", () => {
+        setTimeout(() => toast("邮 新邮件", "<b>星空之下（匿名）</b>：【求助】我的父母消失了", "", () => {
           openApp("mail"); S.ui.mail.sel = "m_anon"; S.ui.mail.acct = "me"; S.ui.mail.acctSel = "me"; refreshAll();
         }, 12000));
       });
@@ -4043,7 +4266,7 @@ document.addEventListener("click", (e) => {
       S.ui.chat.msgs = []; S.ui.chat.initialized = false;
       inbox.forEach(m => m.unread = false);
       renderIcons(); renderObjectives();
-      toast("⚡ 快速重玩", "已解锁第五章：最后的抉择。这一次，你会选择哪条路？", "warn", null, 8000);
+      toast("速 快速重玩", "已解锁第五章：最后的抉择。这一次，你会选择哪条路？", "warn", null, 8000);
       setFlag("truth_known");
     },
     "open-start": () => $("#start-menu").classList.toggle("hidden"),
@@ -4088,7 +4311,7 @@ document.addEventListener("click", (e) => {
     },
     "show-choice": () => showChoice(),
     "fb-interact": () => openModal(`<div class="pass-box" style="text-align:center">
-      <h3 style="justify-content:center">💬 贴文互动</h3>
+      <h3 style="justify-content:center">${svgIcon("chat")} 贴文互动</h3>
       <div class="pass-hint">贴文互动功能维护中，请稍后再试。</div>
       <div class="pass-buttons" style="justify-content:center">
         <button class="btn" data-action="pass-cancel">知道了</button>
@@ -4108,7 +4331,7 @@ document.addEventListener("click", (e) => {
     "reply-beichen": () => {
       if (has("reply_sent")) return;
       if (!prologueDone()) {
-        toast("✉️ 材料还不够", "先看完网盘里的全部线索（3张截图、照片、文本），再给他一个负责任的答复。", "warn");
+        toast("邮 材料还不够", "先看完网盘里的全部线索（3张截图、照片、文本），再给他一个负责任的答复。", "warn");
         return;
       }
       setFlag("reply_sent");
@@ -4119,7 +4342,7 @@ document.addEventListener("click", (e) => {
       if (has("remote_granted")) { openApp("remote"); return; }
       openModal(`
         <div class="pass-box">
-          <h3>🖥️ 远程连接 · LIN-PC</h3>
+          <h3>${svgIcon("monitor")} 远程连接 · LIN-PC</h3>
           <div class="pass-hint">请输入远程桌面地址和密码<br><span style="color:var(--dim)">北辰在邮件中提供了连接信息</span></div>
           <div class="id-form" style="text-align:left;margin-top:10px">
             <div style="font-size:12px;color:var(--dim);margin-bottom:4px">地址</div>
@@ -4150,7 +4373,7 @@ document.addEventListener("click", (e) => {
     "open-cloud-from-cms": () => openApp("cloud"),
     "hack-gov": () => {
       if (has("gov_hacked")) return;
-      if (!has("obs_unlocked")) { toast("🔐 需要密码本", "先去天象观测站拿到密码本，再回来入侵政务内网。", "warn"); return; }
+      if (!has("obs_unlocked")) { toast("锁 需要密码本", "先去天象观测站拿到密码本，再回来入侵政务内网。", "warn"); return; }
       const term = $("#hack-terminal");
       if (!term) return;
       term.style.display = "block";
@@ -4166,7 +4389,7 @@ document.addEventListener("click", (e) => {
       beep(660, .15, .03, .7);
       setTimeout(() => {
         setFlag("gov_hacked");
-        toast("📂 入侵成功", "已获取官方内部文件（AES-256 加密）。用观测站拿到的密码本解开它。", "danger");
+        toast("夹 入侵成功", "已获取官方内部文件（AES-256 加密）。用观测站拿到的密码本解开它。", "danger");
         refreshApp("browser");
         ding();
       }, 2200);
@@ -4178,7 +4401,7 @@ document.addEventListener("click", (e) => {
       const v = ($("#cloud-pass").value || "").trim();
       if (v === "20481015") {
         setFlag("cloud_opened"); ding(); refreshApp("cloud");
-        toast("🔓 网盘已解锁", "2048年10月15日——北辰的生日。文件夹「线索」已打开。", "");
+        toast("开 网盘已解锁", "2048年10月15日——北辰的生日。文件夹「线索」已打开。", "");
       } else { beepErr(); const el = $("#cloud-error"); if (el) el.textContent = "密码错误。提示：YYYYMMDD，8位。他今年18岁。"; }
     },
     "cloud-view": () => { S.ui.cloud.view = arg; refreshApp("cloud"); checkPrologue(); },
@@ -4199,7 +4422,7 @@ document.addEventListener("click", (e) => {
         S._passForceHint = "「星空还在」——保险箱里那张纸条上的接头暗号。";
         passwordModal({
           title: "U盘A · 已加密",
-          hint: `密码提示（老张附言）：「密码还是老样子，你知道的。」<br>💡 和纸条上那句接头暗号是同一句。`,
+          hint: `密码提示（老张附言）：「密码还是老样子，你知道的。」<br>${svgIcon("spark")} 和纸条上那句接头暗号是同一句。`,
           placeholder: "输入暗号",
           check: v => v === "星空还在",
           onOk: () => { setFlag("usbA_opened"); S.ui.remote.view = "usbA"; refreshApp("remote"); tryCh1Done(); },
@@ -4215,7 +4438,7 @@ document.addEventListener("click", (e) => {
       S._passForceHint = "2049年3月12日——北辰第一次开口叫「妈妈」的日子 → 20490312";
       passwordModal({
         title: "林父的保险箱",
-        hint: `密码提示：「北辰第一次开口说话的日子」。<br>💡 加密频道里，北辰告诉过你：2049年3月12日。`,
+        hint: `密码提示：「北辰第一次开口说话的日子」。<br>${svgIcon("spark")} 加密频道里，北辰告诉过你：2049年3月12日。`,
         placeholder: "8位数字（YYYYMMDD）",
         numeric: true,
         check: v => v === "20490312",
@@ -4229,6 +4452,12 @@ document.addEventListener("click", (e) => {
     },
 
     
+    "chat-ask-safe": () => {
+      setFlag("safe_asked");
+      chatPush("me", "北辰，我爸保险箱的密码提示——你说你问过妈妈？");
+      chatPush("them", "嗯。「我第一次开口说话的日子」。2049年3月12日，我第一次开口叫妈妈。八位数字：20490312。", "加密用户BC");
+      refreshApp("chat");
+    },
     "chat-choice": () => {
       if (has("ch3_chose")) return;
       setFlag("ch3_chose");
@@ -4259,7 +4488,7 @@ document.addEventListener("click", (e) => {
 对了，我的信用积分卡密码是「双子星」。你可以用这个进入生命延续中心的员工系统，调出我的原始评估报告。你会发现，我本来才是那个应该活下来的人。
 
 ——你的弟弟，北辰B`);
-              toast("✉️ 北辰B的信", "信里藏着进入母体档案库的钥匙——读完它。", "warn", () => openApp("chat"));
+              toast("邮 北辰B的信", "信里藏着进入母体档案库的钥匙——读完它。", "warn", () => openApp("chat"));
             }, 900);
       }, 1100);
     },
@@ -4274,20 +4503,20 @@ document.addEventListener("click", (e) => {
       const info = (pin || {}).info || "";
       const el = $("#map-info");
       if (arg.includes("天象观测站") && has("dm_read")) {
-        if (el) el.innerHTML = `<b>📍 ${esc(arg)}</b><br>${esc(info)}<br><br><button class="btn btn-primary" data-action="obs-enter-from-map">🔑 进入观测站（D_张情报关联地点）</button>`;
+        if (el) el.innerHTML = `<b>${svgIcon("pin")} ${esc(arg)}</b><br>${esc(info)}<br><br><button class="btn btn-primary" data-action="obs-enter-from-map">${svgIcon("key")} 进入观测站（D_张情报关联地点）</button>`;
         return;
       }
-      if (el) el.innerHTML = `<b>📍 ${esc(arg)}</b><br>${esc(info)}`;
+      if (el) el.innerHTML = `<b>${svgIcon("pin")} ${esc(arg)}</b><br>${esc(info)}`;
     },
     "pin-34": () => { S.ui.map.view = "street"; refreshApp("map"); },
-    "pin-factory": () => toast("📍 3号仓库", "临港市东郊 · 紧邻货运铁路 · 新增监控（9月架设）", "warn"),
+    "pin-factory": () => toast("位 3号仓库", "临港市东郊 · 紧邻货运铁路 · 新增监控（9月架设）", "warn"),
     "open-streetview": () => { S.ui.map.view = "street"; openApp("map"); },
-    "map-maintenance": () => toast("🛰️ 星途地图", "该功能正在<b>地图维护中</b>，暂不可用。", "warn", null, 3500),
+    "map-maintenance": () => toast("卫 星途地图", "该功能正在<b>地图维护中</b>，暂不可用。", "warn", null, 3500),
     "gov-decrypt": () => {
       const k = ($("#gov-dec-key").value || "").trim();
       if (k === "0412") {
         setFlag("gov_decrypted");
-        toast("🔓 解密成功", "密码本校验通过，《双子计划_实施方案_2048.docx》已可读。", "warn", null, 6000);
+        toast("开 解密成功", "密码本校验通过，《双子计划_实施方案_2048.docx》已可读。", "warn", null, 6000);
         refreshApp("browser");
       } else {
         beepErr();
@@ -4311,7 +4540,7 @@ document.addEventListener("click", (e) => {
     },
     "obs-look-around": () => {
       const box = $("#obs-around");
-      if (box) box.innerHTML = `<div class="hint-box" style="margin-top:12px">🔦 你仔细看了看周围：行军床下有一双男式运动鞋（42码），保温壶里的水还是温的——老张可能刚离开不久。墙上钉着一张星图，某个星座的位置被红笔圈了出来，旁边写着：「0412」。</div>`;
+      if (box) box.innerHTML = `<div class="hint-box" style="margin-top:12px">${svgIcon("flashlight")} 你仔细看了看周围：行军床下有一双男式运动鞋（42码），保温壶里的水还是温的——老张可能刚离开不久。墙上钉着一张星图，某个星座的位置被红笔圈了出来，旁边写着：「0412」。</div>`;
     },
     "obs-unlock": () => {
       const v = ($("#obs-pass").value || "").trim();
@@ -4320,7 +4549,7 @@ document.addEventListener("click", (e) => {
         S.ui.obs.view = "pc_home";
         ding();
         refreshApp("browser");
-        toast("🔓 电脑解锁", "老张的电脑打开了。桌面上有三个文件——日记、账目、结构图。", "warn");
+        toast("开 电脑解锁", "老张的电脑打开了。桌面上有三个文件——日记、账目、结构图。", "warn");
       } else {
         beepErr();
         S.ui.obs.tried = S.ui.obs.tried || [];
@@ -4383,7 +4612,7 @@ document.addEventListener("click", (e) => {
     "open-page": () => { S.ui.browser.page = arg; refreshApp("browser"); },
     "gov-sub": () => { S.ui.govSub = arg || "crlcs"; refreshApp("browser"); },
     "center-sub": () => { S.ui.centerSub = arg || "home"; refreshApp("browser"); },
-    "maint": () => toast("🚧 页面维护中", "该板块正在维护，暂未开放。", "warn", null, 3500),
+    "maint": () => toast("维 页面维护中", "该板块正在维护，暂未开放。", "warn", null, 3500),
     "go-home": () => { S.ui.browser.page = "home"; S.ui.browser.query = ""; S.ui.browser.results = null; refreshApp("browser"); },
     "browser-back": () => {
       if (S.ui.browser.page !== "home") {
@@ -4392,7 +4621,7 @@ document.addEventListener("click", (e) => {
       }
     },
     "browser-forward": () => { beep(400, .05, .02); },
-    "browser-refresh": () => { refreshApp("browser"); beep(600, .08, .03); toast("🔄 已刷新", "页面已重新加载。", "", null, 2000); },
+    "browser-refresh": () => { refreshApp("browser"); beep(600, .08, .03); toast("刷 已刷新", "页面已重新加载。", "", null, 2000); },
     "clear-search-history": () => { S.searchHistory = []; refreshApp("browser"); },
 
     
@@ -4407,7 +4636,7 @@ document.addEventListener("click", (e) => {
       const p = $("#bd-pass").value.trim();
       if (p === "双子星") {
         S.ui.id.backdoorLogged = true; ding();
-        toast("🕳️ 越权成功", "「欢迎，林北辰B。访问权限：次级管理员。」", "danger");
+        toast("洞 越权成功", "「欢迎，林北辰B。访问权限：次级管理员。」", "danger");
         refreshApp("id");
       } else { beepErr(); $("#bd-error").textContent = "密码错误。北辰B说过：他的信用积分卡密码。"; }
     },
@@ -4417,7 +4646,7 @@ document.addEventListener("click", (e) => {
       const k = ($("#tape-dec-key").value || "").trim();
       if (k === "2048") {
         S.ui.id.tapeDecrypted = true;
-        toast("🔓 解密完成", "录音已解密，现在可以播放了。", "", null, 3000);
+        toast("开 解密完成", "录音已解密，现在可以播放了。", "", null, 3000);
         refreshApp("id");
       } else {
         beepErr();
@@ -4454,7 +4683,7 @@ document.addEventListener("click", (e) => {
         if ((a === "v3" && isAB(b)) || (b === "v3" && isAB(a))) {
           if (!has("vp_ab")) {
             setFlag("vp_ab");
-            toast("🧬 声纹分析 · 证据入档", "结论：<b>存在两个「林北辰」。</b>这份比对报告足以支撑报道、向中心施压——带着它继续调查。", "warn", null, 11000);
+            toast("因 声纹分析 · 证据入档", "结论：<b>存在两个「林北辰」。</b>这份比对报告足以支撑报道、向中心施压——带着它继续调查。", "warn", null, 11000);
           }
         }
       }
@@ -4466,7 +4695,7 @@ document.addEventListener("click", (e) => {
     "cms-tab": () => { S.ui.cms.tab = arg; refreshApp("cms"); },
     "publish-report": () => {
       openModal(`<div class="pass-box" style="text-align:center">
-        <h3 style="justify-content:center">🚨 确认发布？</h3>
+        <h3 style="justify-content:center">${svgIcon("alert")} 确认发布？</h3>
         <div class="pass-hint">这篇报道将推送至全城四千万人。一旦发出，无法撤回。<br>你确定要按下这个按钮吗？</div>
         <div class="pass-buttons" style="justify-content:center">
           <button class="btn" data-action="pass-cancel">再想想</button>
@@ -4485,7 +4714,7 @@ document.addEventListener("click", (e) => {
     "choose-1": () => {
       closeModal(); setFlag("choice_route1"); openApp("cms");
       S.ui.cms.tab = "editor"; refreshApp("cms");
-      toast("📝 写下真相", "编辑器已解锁。检查你的标题和正文，然后按下那个按钮。", "danger");
+      toast("记 写下真相", "编辑器已解锁。检查你的标题和正文，然后按下那个按钮。", "danger");
     },
     "choose-2": () => {
       closeModal();
@@ -4495,7 +4724,7 @@ document.addEventListener("click", (e) => {
     "choose-3": () => {
       closeModal();
       openModal(`<div class="pass-box" style="text-align:center">
-        <h3 style="justify-content:center">🌑 确认删除一切？</h3>
+        <h3 style="justify-content:center">${svgIcon("moon")} 确认删除一切？</h3>
         <div class="pass-hint">删除帖子、格式化U盘、销毁录音。<br>让北辰A忘了这一切，安全地活下去——<br>代价是让另一个孩子，连同真相一起消失。<br><b>这个选择无法撤销。</b></div>
         <div class="pass-buttons" style="justify-content:center">
           <button class="btn" data-action="pass-cancel">住手</button>
@@ -4614,7 +4843,7 @@ setInterval(() => {
   if (has("b_letter") && !has("truth_known")) pool.push("北辰B给的密码是四个汉字，不是数字。");
   if (has("truth_known") && !has("game_over")) pool.push("右侧的任务目标面板里，有一个红色的按钮。");
   if (!pool.length) pool.push("桌面上那个「系统监控」窗口，偶尔会滚出一些不该被看到的东西。");
-  toast("💡 闪念", pool[Math.floor(Math.random() * pool.length)], "", null, 9000);
+  toast("提 闪念", pool[Math.floor(Math.random() * pool.length)], "", null, 9000);
 }, 8000);
 
 
