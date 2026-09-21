@@ -35,7 +35,27 @@ const has = (f) => !!S.flags[f];
 const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 
-function ac() { if (!S.audioCtx) S.audioCtx = new (window.AudioContext || window.webkitAudioContext)(); return S.audioCtx; }
+let _audioUnlocked = false;
+function unlockAudio() {
+  if (_audioUnlocked) return;
+  _audioUnlocked = true;
+  try {
+    const ctx = ac();
+    if (ctx.state === "suspended") ctx.resume();
+  } catch (e) {}
+  try {
+    const a = new Audio();
+    a.play().then(() => a.pause()).catch(() => {});
+  } catch (e) {}
+}
+function ac() {
+  if (!S.audioCtx) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    S.audioCtx = new AC();
+  }
+  if (S.audioCtx.state === "suspended") S.audioCtx.resume();
+  return S.audioCtx;
+}
 function beep(freq, dur, vol = 0.08, when = 0) {
   try {
     const c = ac(), o = c.createOscillator(), g = c.createGain();
@@ -52,6 +72,9 @@ const beepRing = () => { beep(440, .4, .06); beep(440, .4, .06, .8); };
 const beepGunshot = () => { beep(90, .35, .3); beep(60, .5, .25, .05); };
 
 /* ---------------- Toast ---------------- */
+["click", "touchstart", "keydown"].forEach(ev =>
+  document.addEventListener(ev, unlockAudio, { once: false, passive: true })
+);
 function toast(title, body, kind = "", onClick = null, ms = 8000) {
   const el = document.createElement("div");
   el.className = "toast " + kind;
@@ -642,7 +665,6 @@ let inbox = [
 
 我叫林北辰，今年18岁。我父母10月8号说去邻市临港市，参加什么「智慧城市交流会」，说好两天就回来。可是到今天第4天了，人没回来，手机也全部关机。我打到他们公司去问，公司说他们请了年假——不可能的，我妈的年假从来都攒着不舍得用。
 
-我去派出所报案，他们说成年人失踪不满7天不能立案。可再等3天……我不知道自己还能不能撑到那时候。
 
 我在家整理东西的时候，发现了两张去临港市的高铁票，10月8日的。但是座位号是空的。我查过了，座位号是空的，就说明他们根本没有上那班车。那他们到底去了哪里？？为什么票买了又不坐？？
 
@@ -695,7 +717,6 @@ const pendingMails = {
 地址：192.168.3.107
 临时密码：bc1027
 
-我爸电脑里肯定有东西，他就是那种什么都往家里电脑存的人。哦对了——如果您要打开他的保险箱，密码提示是「北辰第一次开口说话的日子」。这说的就是我，可我自己哪记得住啊……我问过我妈了，您在加密频道里问我，我打给您。
 
 ——北辰`,
     actions: [{ label: " 打开远程连接", act: "open-remote" }]
@@ -795,7 +816,7 @@ const evidences = [
 
 我找到了两张高铁票——日期是10月8号，但座位号是空的。您明白吗？他们根本没上车。
 
-便利店的人说有个穿黑西装的男人在打听我爸妈。我不敢报警，警察要满7天……求求您回我。」`
+便利店的人说有个穿黑西装的男人在打听我爸妈。我不敢报警……求求您回我。」`
   },
   {
     id: "v2", icon: "", name: "老城区网吧 · 自动应答录音", meta: "来源：星途街景拨号 · 录制",
@@ -845,7 +866,9 @@ function stopVoiceAudio() {
 }
 function playVoiceAudio(src) {
   try {
+    unlockAudio();
     const a = new Audio(src);
+    a.volume = 1.0;
     S._voiceAudio = a;
     a.onended = () => {
       if (S._voiceAudio === a) S._voiceAudio = null;
@@ -1745,7 +1768,6 @@ const PAGES = {
       <div class="fb-topnav">
         <div class="fb-brand">星都社交</div>
         <div class="fb-searchbar">${svgIcon("search")} 搜索星都社交</div>
-        <div class="fb-navicons"><span title="首页">首</span><span title="视频">视</span><span title="群组">群</span><span title="消息">信</span><span title="通知">铃</span></div>
       </div>
       <div class="fb-body">
         <div class="fb-left">
@@ -3146,23 +3168,32 @@ const MAP_PINS = [
 function mapHtml() {
   if (S.ui.map.view === "street") return streetViewHtml();
   const pin34 = has("map_34") ? `
-    <div class="map-pin" style="left:14%;top:22%" data-action="pin-34">
-      <div class="mp-dot" style="background:var(--warn);box-shadow:0 0 12px rgba(255,180,84,.8)"></div>
+    <div class="map-pin warn" style="left:14%;top:22%" data-action="pin-34">
+      <div class="mp-dot"></div>
       <div class="mp-label">红星路34号（新标记）</div>
     </div>` : "";
   return `<div class="app-root">
     <h3 class="app-title">星途地图 <span class="tag">星都 · 临港</span></h3>
     <div class="app-sub">搜索地址 · 查看街景 · 部分区域涉密</div>
-    <div class="map-view" style="height:300px">
-      <div class="map-road" style="left:0;right:0;top:55%;height:10px"></div>
-      <div class="map-road" style="top:0;bottom:0;left:38%;width:8px"></div>
-      <div class="map-road" style="left:0;width:60%;top:28%;height:6px;transform:rotate(6deg);transform-origin:left"></div>
+    <div class="map-view" style="height:340px">
+      <div class="map-road major" style="left:0;right:0;top:55%;height:10px"></div>
+      <div class="map-road major" style="top:0;bottom:0;left:38%;width:8px"></div>
+      <div class="map-road" style="left:0;width:70%;top:28%;height:5px;transform:rotate(6deg);transform-origin:left"></div>
+      <div class="map-road" style="left:0;right:0;top:78%;height:5px"></div>
+      <div class="map-road" style="top:0;bottom:0;left:66%;width:6px"></div>
+      <div class="map-road" style="left:0;right:0;top:15%;height:4px"></div>
+      <div class="map-road" style="top:0;bottom:0;left:15%;width:5px"></div>
+      <div class="map-road" style="left:20%;width:50%;top:85%;height:4px;transform:rotate(-4deg);transform-origin:left"></div>
       ${MAP_PINS.map(p => `
         <div class="map-pin" style="left:${p.x}%;top:${p.y}%" data-action="map-pin" data-arg="${p.name}">
           <div class="mp-dot"></div><div class="mp-label">${p.name}</div>
         </div>`).join("")}
       ${pin34}
-      <div style="position:absolute;right:12px;bottom:10px;font-size:10.5px;color:#5f7d94">临港市 ◈ 高铁1小时 →</div>
+      <div style="position:absolute;right:14px;bottom:12px;font-size:10.5px;color:#6b8aab;display:flex;align-items:center;gap:6px">
+        <span style="display:inline-block;width:8px;height:8px;border:1.5px solid #6b8aab;border-radius:50%"></span>
+        临港市 · 高铁1小时
+      </div>
+      <div style="position:absolute;left:14px;top:12px;font-size:10.5px;color:#6b8aab;letter-spacing:1px">星都市 · 卫星视图</div>
     </div>
     <div id="map-info" class="gov-article" style="margin-top:14px;font-size:13px;line-height:2;color:#b8cbdd">点击地图上的标记查看详情。${has("map_34") ? "" : "部分地点需要更多线索才会显示。"}</div>
   </div>`;
@@ -3587,7 +3618,6 @@ function voiceHtml() {
     <div class="voice-list">
       ${avail.map(e => `
         <div class="voice-item ${sel && sel.id === e.id ? "playing" : ""}" data-action="voice-select" data-arg="${e.id}">
-          <div class="vi-icon">${e.icon}</div>
           <div style="flex:1">
             <div class="vi-name">${e.name}</div>
             <div class="vi-meta">${e.meta}</div>
@@ -4301,12 +4331,24 @@ document.addEventListener("click", (e) => {
         if (bar && done.length) bar.classList.remove("hidden");
       } catch (e) {}
     },
+    "author-to-intro": () => {
+      closeModal();
+      $("#ending-screen").classList.add("hidden");
+      S.flags.game_over = false;
+      $("#intro-screen").classList.remove("hidden");
+      try {
+        const done = JSON.parse(localStorage.getItem("wig_endings") || "[]");
+        const bar = $("#quick-replay-bar");
+        if (bar && done.length) bar.classList.remove("hidden");
+      } catch (e) {}
+    },
     "author-note": () => {
       openModal(`<div class="pass-box" style="text-align:center;max-width:620px;width:94%">
         <h3 style="justify-content:center">作者寄语</h3>
         <div class="pass-hint" style="text-align:left;line-height:2;font-size:13.5px;max-height:64vh;overflow-y:auto;padding-right:6px">感谢你。<br><br>感谢你扮演沈砚。感谢你读完每一封邮件，翻过每一张照片的背面，在没有人告诉你要去哪的时候，还是把那些没有人愿意记住的名字，一个一个捡了起来。<br><br>这是我第一次做WIG游戏。如果有问题和建议，欢迎向我反馈。<br><br>在此之前，我只会写故事。我不知道什么叫状态机，不知道变量会打架，不知道一个按钮的位置能调一整个下午。写下第一版的时候，我甚至不确定它能不能跑起来。<br><br>但它跑起来了。<br><br>我必须诚实地说：这个游戏，是我和 AI 一起做出来的。剧本、世界观、那些藏在日志里的小字、那句“镜子不恨人，镜子只是记得”——是我写的。<br><br>但从第一行 console.log到最后一版调试，从状态机到时间压力条，从证据板的拖拽逻辑到三个结局的分支判定，AI 陪我走完了全程。它不知道我为什么执意要写林北辰，但它帮我把每一个 undefined 和每一处 null 都找了出来。<br><br>它是我第一个、也是唯一一个程序员同事。<br><br>有时候我觉得这件事有点奇妙：一个关于“复制体”和“备份”的故事，最终是被一个由无数文本训练出来的存在，帮我一砖一瓦砌完的。我不知道这算不算一种呼应。<br><br>但我知道，如果没有它，这个游戏可能还停在“我只会写故事”的阶段。如果没有我，那些代码也只是一个空壳，不会有人替林北辰多说一句话。是人决定了故事走向哪里，是 AI 让故事能够抵达你面前。<br><br>现在你已经通关三次。你知道那瓶水还是温的，你知道那面镜子里有第二个人影，你知道“海外深造”四个字底下压着多少名字。你可能比我更熟悉这些角色的呼吸。<br><br>这就是我做这个游戏想要的东西：不是让你猜对谜底，而是让你在心里，替他们多活了一遍。谢谢你替我做到了。谢谢你愿意在这个城市里，为一个十八岁的男孩停下来。<br><br>最后，谢谢你走完全部三个结局。<br><br>但是。请等一下。<br><br>当你合上这个故事的时候，有没有一个念头闪过——<br><br>那 001 到 099 号呢？<br><br>故事里只提到过一句话：母体是双子计划最初的那批备份体，编号 001 到 099，全部活过了 18 岁，却从来没有被处置。<br><br>他们是谁？<br><br>他们被关在哪里？<br><br>这六年里，他们看着身边的人一个一个被“送走”，他们又做了什么？<br><br>还有那个在暗涌论坛置顶了十年帖子、从来没有露过真面目的守夜人——他到底是一个人，还是一个组织，还是一种更古老的东西？<br><br>以及，那个在档案里被涂黑的 07 号。他到底是死了，还是只是被藏起来了？三个月后，沈砚会在一个深夜，收到一封没有发件人的邮件。邮件正文只有五个字：<br><br>「他还活着。07。」<br><br>——《星都双子2 · 双生之影》，敬请期待。<br><br>—— rwxws</div>
-        <div class="pass-buttons" style="justify-content:center">
-          <button class="btn" data-action="pass-cancel">知道了</button>
+        <div class="pass-buttons" style="justify-content:center;gap:10px">
+          <button class="btn" data-action="pass-cancel">关闭</button>
+          <button class="btn btn-primary" data-action="author-to-intro">回到简介</button>
         </div></div>`);
     },
     "show-choice": () => showChoice(),
