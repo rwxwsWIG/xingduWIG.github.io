@@ -3977,13 +3977,8 @@ function showEnding(n) {
   } catch (e) {}
   const endBtn = document.querySelector("#ending-screen .btn[data-action='to-intro'], #ending-screen .btn[data-action='author-note']");
   if (endBtn) {
-    if (endingsCount >= 3) {
-      endBtn.dataset.action = "author-note";
-      endBtn.textContent = "作者寄语";
-    } else {
-      endBtn.dataset.action = "to-intro";
-      endBtn.textContent = "回到简介";
-    }
+    endBtn.dataset.action = "to-intro";
+    endBtn.textContent = "回到简介";
   }
   S.flags.game_over = true;
   renderObjectives();
