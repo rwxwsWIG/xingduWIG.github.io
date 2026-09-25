@@ -852,7 +852,7 @@ const evidences = [
   {
     id: "v5", icon: "", name: "李医生_自述（母体档案库）", meta: "来源：ID系统 · 隐藏复核窗口",
     need: () => has("truth_known"),
-    transcript: `「……我受够了。他们强迫我在评估报告上做手脚，让那些『多余』的孩子看起来有心理问题……我做过最坏的一件事，就是把一个本来很健康的小男孩标记成『反社会』，因为他父母不肯给贿赂金……那个男孩好像姓林……我……我每天晚上都做噩梦……」
+    transcript: `「……我受够了。他们强迫我在评估报告上做手脚，让那些『多余』的孩子看起来有心理问题……我做过最坏的一件事，就是把一个本来很健康的小男孩标记成『反社会』，因为他父母不肯给贿赂金……那个男孩好像姓林……我……我每天晚上都做噩梦……后来我才知道，是辰天法务部的律师告诉我，只要把低分孩子改成冗余体，他们就能顺利处理掉。辰天说，这是为了星都的『人口优化』……」
 
 （录音中断。）
 
@@ -2366,6 +2366,23 @@ const PAGES = {
       { author: "调度员（匿名）", avatar: "讯", text: "已阅。3号仓库本月的转运名单我拿到了，你儿子的编号在'待转运'那一栏，日期我私发给你。（附件已端到端加密，别下载到联网设备。）" },
     ]
   }) : forumLocked(),
+  forum_ct: () => has("forum_open") ? browserChrome(`
+    <div class="dark-forum">
+    <div class="forum-backbar"><button class="btn" data-action="open-page" data-arg="forum">← 返回论坛列表</button></div>
+    <div class="web-header" style="border-color:#1f3a2a"><h2 style="font-size:16px">辰天法务部：如何合法地让人「社会性死亡」…</h2><span class="wh-url">anyong.onion · 帖子</span></div>
+    <div class="forum-post">
+      <div class="fp-author"><span class="fp-name">被404的人</span><span class="fp-floor">1楼</span></div>
+      <div style="white-space:pre-wrap">他们不怕坐牢，因为他们从不亲自坐牢。
+
+我前东家是辰天法务部的外包。他们的「社会性死亡」流水线：买通评估员把目标写成「危险人格」→ 通过居民ID系统清零信用积分 → 档案「查无此人」。合法，干净，一滴血都不沾。
+
+上个月，他们盯上了一个姓林的档案员。他只是把一份问卷的抬头复印了下来……</div>
+    </div>
+    <div class="gov-banner" style="background:linear-gradient(90deg,#5a1a1a,#2a0a0a);border-color:#c04a4a;margin-top:14px;color:#ffd7dc;font-weight:700;border-left:4px solid #e06c75">
+      ⚠ 该帖已被「404」：辰天安全网关实时拦截 · 内容同步删除 · 访问已记录
+    </div>
+    <div class="hint-box" style="margin-top:12px">帖子读到一半就消失了。刚才那些字，是真的，还是在钓鱼？你背后忽然有点凉。</div>
+    </div>`) : forumLocked(),
   mall: () => browserChrome(`
     ${msNav({
       brand: "星途地图", sub: "XINGTU MAP · 地点详情",
@@ -2724,7 +2741,7 @@ function forumHome() {
     </div>
     <div class="an-dm">
       <div class="an-dm-head">站内私信 · D_张 <span class="an-dm-new">新</span></div>
-      <div class="an-dm-body">是那个记者吧。老林提过你。<br><br>那我就少废话，你就记三件事：临港，东郊，化工厂3号仓库。10月15日夜里，有一批「货」要转走。里面可能有我儿子，还有老林的媳妇。<br><br>信不信随你。信的话，就别磨蹭。<br><br>——D_张</div>
+      <div class="an-dm-body">是那个记者吧。老林提过你。<br><br>那我就少废话，你就记三件事：临港，东郊，化工厂3号仓库。10月15日夜里，有一批「货」要转走。里面可能有我儿子，还有老林的媳妇。<br><br>这批货不只是人——还有辰天点名要「销毁」的实验室废料。辰天法务部的人会亲自押车，他们的手段比警察还黑。<br><br>信不信随你。信的话，就别磨蹭。<br><br>——D_张</div>
       <div class="an-dm-foot">2066-10-13 21:02 · 端到端加密送达</div>
     </div>
     <div class="web-header" style="border-color:#1f3a2a"><h2>讨论区</h2><span class="wh-url">anyong.onion · 身份已校验 ✓</span></div>
@@ -2742,6 +2759,11 @@ function forumHome() {
       <div style="flex:1"><div class="ft-title">如果有人看到我的家人，请告诉我。</div>
       <div class="ft-meta">D_张 · 2066-10-13 20:41 · 寻人</div></div>
       <div class="ft-rep">6 回复</div>
+    </div>
+    <div class="forum-thread" data-action="open-page" data-arg="forum_ct">
+      <div style="flex:1"><div class="ft-title">辰天法务部：如何合法地让人「社会性死亡」</div>
+      <div class="ft-meta">被404的人 · 2066-10-12 02:17 · 匿名</div></div>
+      <div class="ft-rep">—</div>
     </div>
     <div class="forum-thread" style="opacity:.45;cursor:default">
       <div style="flex:1"><div class="ft-title">[已删除] 关于生命延续中心地下三层的传闻</div>
@@ -2790,12 +2812,13 @@ function cloudHome() {
   const items = [
     { id: "folder_chats", icon: "夹", name: "爸妈的聊天记录", meta: "3张截图", flag: null },
     { id: "photo2048", icon: "图", name: "2048留念.jpg", meta: "2048-06-01 · 2.4MB", flag: "e_photo" },
+    { id: "leave_proof", icon: "文", name: "离职证明.txt", meta: "2048-04-30 · 2KB", flag: "e_proof" },
     { id: "note", icon: "文", name: "不要相信任何人.txt", meta: "1KB", flag: "e_note" },
   ];
   return `<div class="app-root">
     <h3 class="app-title"><span class="at-ic">${svgIcon("cloud")}</span>星云网盘 · 共享链接</h3>
     <div class="app-sub">分享者：星空之下 · 文件夹：线索 · 已解锁 ✓</div>
-    <div class="file-crumb">共享 / <b>线索</b> / （2个文件 · 1个文件夹）</div>
+    <div class="file-crumb">共享 / <b>线索</b> / （3个文件 · 1个文件夹）</div>
     <div class="file-grid">
       ${items.map(i => `
         <div class="file-card" data-action="cloud-view" data-arg="${i.id}">
@@ -2806,10 +2829,10 @@ function cloudHome() {
     </div>
     ${prologueDone()
       ? ""
-      : `<div class="hint-box">${svgIcon("search")} 逐一点开文件夹里的3张截图和2个文件。<b>2048留念.jpg 已损坏</b>，但仍可<b>查看文件属性</b>（EXIF）。</div>`}
+      : `<div class="hint-box">${svgIcon("search")} 逐一点开文件夹里的3张截图和3个文件。<b>2048留念.jpg 已损坏</b>，但仍可<b>查看文件属性</b>（EXIF）。</div>`}
   </div>`;
 }
-function prologueDone() { return has("e_chat1") && has("e_chat2") && has("e_chat3") && has("e_photo") && has("e_note"); }
+function prologueDone() { return has("e_chat1") && has("e_chat2") && has("e_chat3") && has("e_photo") && has("e_proof") && has("e_note"); }
 
 function chatShot(sender, date, msgs) {
   return `<div class="chat-shot">
@@ -2894,6 +2917,24 @@ function cloudView(id) {
       <div id="exif-box"></div>
     </div>`;
   }
+  if (id === "leave_proof") {
+    setFlag("e_proof");
+    return `<div class="file-viewer">
+      <button class="btn fv-back" data-action="cloud-home">← 返回</button>
+      <h3 style="margin-bottom:14px">离职证明.txt</h3>
+      <div class="txt-file">辰天生物科技有限公司 · 人事部
+
+离职证明
+
+兹证明 林建国（男）自 2038 年至 2048 年受雇于辰天生物科技有限公司（外包岗位），从事后勤档案整理工作，于 2048 年 4 月 30 日因「个人原因」离职。
+
+特此证明。
+
+—— 辰天生物 · 人事部（盖章）
+2048-04-30</div>
+      <div class="hint-box" style="margin-top:12px">${svgIcon("alert")} <b style="color:var(--warn)">⚠ 关键信息已被辰天法务部远程拦截</b><br>离职原因一栏被远程涂黑加密。文件末尾的加密提示写着：<br><span class="mono" style="color:#8fb4d8">「我的父母因为发现了公司的一个秘密被开除了，他们让我绝对不要对任何人说。」</span><br>想解开它，你得先找到那扇「水面之下」的门。</div>
+    </div>`;
+  }
   if (id === "note") {
     setFlag("e_note");
     return `<div class="file-viewer">
@@ -2957,6 +2998,15 @@ function remoteWork() {
           <div class="mono" style="color:#4a5a68;line-height:1.6;word-break:break-all"> Kčk32¤jJ9d...§8fH2...（文档内容已损坏，全部为乱码）<br>¤jj2KL#9...xP0qm...@@dkW...</div>
           <div class="divider"></div>
           <div style="font-family:Georgia,serif;color:#d8c8a0;font-style:italic">页眉手写扫描注释：<br>「别信文件，信地址——临港市东郊废弃化工厂<b>3号仓库</b>。」</div>
+        </div>
+      </div>
+      <div class="dossier" style="margin-top:16px">
+        <div class="dossier-head"><span>《星都观察者》社论草稿 · 未发表（打印残页）</span><span class="tag amber">2049-11 · 来自辰天生物内部打印机</span></div>
+        <div class="dossier-body">
+          <div style="font-size:14px;font-weight:700;margin-bottom:8px">《辰天建设：星都的基石，还是毒瘤？》</div>
+          <div style="font-size:13px;line-height:1.9;color:#c2d0e4">四十年前，辰天还只是临港一家承包市政工程的小公司。今天，它同时是星都最大的建筑商、最慷慨的慈善家——以及最沉默的刽子手。一份外泄的招标底稿显示：<b style="color:var(--warn)">「成人礼测试」的评估中心基建与设备维护，全部由辰天建设中标。</b>……（草稿止于此）</div>
+          <div class="divider"></div>
+          <div style="font-size:12px;color:#587089">残页页脚有他人手写批注：<span class="mono">「这篇稿子被压了。有些公司，你惹不起。——陈」</span><br>这份残页，是林父当年在辰天生物做外包时，从内部打印机上捡到的。</div>
         </div>
       </div>
     </div>
@@ -3065,6 +3115,8 @@ function remoteUsbA() {
           <div class="msm-body">计划我看了。为了北辰，我什么都愿意。<br>如果出事，暗号还是老样子。</div>
         </div>
         <div class="ms-ps">PS（老张附言）：「密码还是老样子，你知道的。」</div>
+        <div class="divider"></div>
+        <div style="font-size:12.5px;color:#8fb4d8;line-height:1.8">附件2 · 问卷扫描件（页边局部）：抬头「星都教育局」旁叠着一枚红章——<b style="color:var(--warn)">「辰天集团联合评审委员会」</b>。成人礼的评估，辰天在暗中把控。</div>
       </div>
     </div>
   </div>`;
@@ -3080,6 +3132,7 @@ function remoteUsbB() {
         <div class="dossier-head"><span>B_契约.mp4</span><span class="tag red">文件头损坏 · 已启用星灵AI配音</span></div>
         <div class="dossier-body">
           <div class="locked-note" style="margin-bottom:10px">⚠ 视频流已损坏，播放器无法解码。文件系统检测到内嵌音轨完好，已自动转写至<b>语音助手 · 星灵</b>——打开「语音」应用即可播放并查看转写。</div>
+          <div style="font-size:12.5px;color:#8fb4d8;line-height:1.8;margin-top:10px">可预览的模糊帧：合同落款处印着一行浅色水印——<b style="color:var(--warn)">「辰天法务部」</b>。</div>
         </div>
       </div>
     </div>
@@ -3359,7 +3412,7 @@ function idScreen() {
 function liTapeHtml() {
   return `<div class="transcript" style="margin-top:14px">
     <div class="t-label">播放记录 · 李医生_自述.wav</div>
-    <div style="white-space:pre-wrap">「……我受够了。他们强迫我在评估报告上做手脚，让那些『多余』的孩子看起来有心理问题……我做过最坏的一件事，就是把一个本来很健康的小男孩标记成『反社会』，因为他父母不肯给贿赂金……那个男孩好像姓林……我……我每天晚上都做噩梦……」</div>
+    <div style="white-space:pre-wrap">「……我受够了。他们强迫我在评估报告上做手脚，让那些『多余』的孩子看起来有心理问题……我做过最坏的一件事，就是把一个本来很健康的小男孩标记成『反社会』，因为他父母不肯给贿赂金……那个男孩好像姓林……我……我每天晚上都做噩梦……后来我才知道，是辰天法务部的律师告诉我，只要把低分孩子改成冗余体，他们就能顺利处理掉。辰天说，这是为了星都的『人口优化』……」</div>
     <div class="gunshot">—— 录音戛然而止，之后只剩沉默 ——</div>
   </div>
 `;
@@ -3382,7 +3435,8 @@ function govHackResult() {
         档案室保存A/B双份记录，B体档案在完成处置后涂黑销毁。<br><br>
         <b>五、经费与审计</b><br>
         本年度已处置冗余体 <b style="color:var(--danger)">1,244</b> 例（较去年增 9.2%），预算剩余 7.3%。<br><br>
-        <span style="color:#587089">签发：星都市卫生健康委员会 · 2066年9月</span>
+        <span style="color:#587089">签发：星都市卫生健康委员会 · 辰天集团专项统筹办公室 · 2066年9月</span><br>
+        <span style="color:#587089">附注：具体执行由辰天CTO办公室下属回声研究所负责。</span>
       </div>`;
   if (!has("gov_decrypted")) {
     return browserChrome(`
@@ -3490,6 +3544,8 @@ function obsDiary() {
 <b>2066-09-28</b>
 老林来找我。他说他也接到通知了。我们两个老头子，在这个观测站里坐了一整夜。望远镜早就坏了，但我们还是盯着天看。老林说：「他们可以选一个，但不能两个都杀。」我说：「那就让他们选不了。」
 
+后来我才知道，李医生也是被逼的——辰天生物的经理拿他女儿的命威胁他。辰天的手，伸得太长了。
+
 <b>2066-10-05</b>
 我们决定了。10月15号夜里，中心要转运一批「货」。老林的媳妇在里面，我儿子可能也在。我们要在那天晚上之前，把能拿到的证据都拿到手。评估问卷是我们改的——为了让两个孩子的分数看起来一样，让他们没法轻易决定杀谁。但这招撑不了多久。
 
@@ -3536,6 +3592,7 @@ function obsBribe() {
           </tbody>
         </table>
         <p style="font-size:12.5px;color:#8fb4d8;margin-top:12px">合计：5笔记录，涉及3名评估员，总金额 470,000 星元。最后一行标注「未收取」——林父拒绝了贿赂，但李医生仍然强行篡改了小林B的心理评分。</p>
+        <p style="font-size:12.5px;color:#e8c4a0;margin-top:10px">这些转账的上游账户，全部指向同一家空壳公司，其母公司登记为<b>「辰天置业」</b>（星都地产 006 号牌照）。钱从辰天来，绕过一切监管。</p>
         <div style="margin-top:14px"><button class="btn" data-action="obs-back-pc">← 返回电脑桌面</button></div>
       </div>
     </div>`);
@@ -3549,6 +3606,7 @@ function obsWarehouseMap() {
         <p style="font-size:12px;color:#8fb4d8">老张手绘的仓库内部布局，已扫描存档。</p>
         <img src="assets/3号仓库_内部结构图.png" alt="3号仓库内部结构图" style="width:100%;max-width:640px;border-radius:10px;border:1px solid #2a4a3a;display:block;margin:14px 0">
         <p style="font-size:12px;color:#8fb4d8">红笔标注：「配电室→监控室电源在同一回路」。通风管道可通行。</p>
+        <p style="font-size:12px;color:#e8c4a0;margin-top:10px">图纸边缘签着一行小字：<b>「辰天建设（监理方）」</b>。切断配电室总闸的方案，是老张当年在辰天建设当保安时偷偷记下的。</p>
         <div style="margin-top:14px"><button class="btn" data-action="obs-back-pc">← 返回电脑桌面</button></div>
       </div>
     </div>`);
@@ -3678,7 +3736,7 @@ function objectiveList() {
   const add = (text, done, current) => L.push({ text, done, current });
   const anon = inbox.find(m => m.id === "m_anon");
   add("阅读北辰的求助邮件", anon ? !anon.unread : true, !has("cloud_opened"));
-  add("查看星云网盘的5条初步线索", prologueDone(), has("cloud_opened") && !prologueDone());
+  add("查看星云网盘的6条初步线索", prologueDone(), has("cloud_opened") && !prologueDone());
   add("回复北辰，连接LIN-PC远程访问", has("remote_granted"), prologueDone() && !has("remote_granted"));
   add("搜查LIN-PC：工作文档 / 相册 / 回收站", has("r_work") && has("r_photo3") && has("letter_read"), has("remote_granted") && !(has("r_work") && has("r_photo3") && has("letter_read")));
   add("开启保险箱（20490312）并查看两个U盘", has("usbA_opened") && has("video_watched"), has("remote_granted") && !(has("usbA_opened") && has("video_watched")));
@@ -3888,10 +3946,13 @@ const NB_COMMENTS = [
 const NB_COMMENTS_EXTRA = [
   { u: "纪检委退休干部", t: "47万星元，5个孩子。这还只是一个评估科三年的账。上面的人呢？必须一查到底。" },
   { u: "2048届家长", t: "我家孩子当年也是心理分突然变低。我们以为是他自己的问题……原来是我们没给钱。" },
+  { u: "辰天前员工", t: "他们连夜开会删数据了。我离职前见过那张「销毁」审批单，签字的是辰天的人。" },
+  { u: "匿名投资者", t: "辰天今天跌停了吧？可他们越是这样急着甩锅，我越觉得报道里的每一句都是真的。" },
 ];
 function showNewsburst(titleText) {
   const title = titleText || "《星都观察者》深度 | 代号「双子」：谁替我们的孩子决定了生死？";
   const comments = has("obs_bribe") ? NB_COMMENTS.concat(NB_COMMENTS_EXTRA) : NB_COMMENTS;
+  const chenDecl = has("obs_bribe") ? `<div class="nb-company" style="margin-top:12px;padding:10px 14px;border:1px solid #5a3a3a;border-radius:8px;background:#241515;font-size:13px;line-height:1.8"><b style="color:#ffb4b4">辰天集团 · 紧急声明</b><br>针对今日报道，辰天集团回应：报道所涉评估环节系「个别底层员工的违规操作」，涉事人员已被开除，与集团无关。集团股价盘中波动，公司运营一切正常。</div>` : "";
   $("#newsburst-inner").innerHTML = `
     <div class="nb-tv">
       <div class="nb-bar"><span class="nb-live">● 直播插播</span><span style="font-size:13px;color:#ffd7dc">全城紧急新闻</span><span class="nb-chan">星都都市频道 · XDTV-1</span></div>
@@ -3904,6 +3965,7 @@ function showNewsburst(titleText) {
           <div class="nb-metric"><div class="nm-num" id="nb-forward">0</div><div class="nm-label">转发量（万）</div></div>
           <div class="nb-metric"><div class="nm-num">1</div><div class="nm-label">热搜第一</div></div>
         </div>
+        ${chenDecl}
         <div class="nb-comments" id="nb-comments"></div>
       </div>
     </div>
@@ -3946,7 +4008,8 @@ function showEnding(n) {
       ${bribeNote}${mapNote}
       <p>一周后，你收到小林A的邮件。他和父母团聚了，但他再没见过他的「弟弟」。政府说，小林B被「转移」了。邮件的末尾，他问：</p>
       <p class="mono" style="border-left:3px solid var(--line);padding-left:12px;color:#9db2c6">「沈记者，我弟弟……算是活下来了吗？」</p>
-      <p>你没能回答。因为你的桌上，正放着一张生命延续中心寄来的律师函——起诉你「泄露国家机密」。</p>`,
+      <p>你没能回答。因为你的桌上，正放着一张<b>辰天集团法务部</b>寄来的律师函——以「侵犯商业机密」和「严重损害企业名誉」为由起诉你。</p>
+      <p>新闻插播的末尾，主持人面无表情地念着：辰天集团股价盘中暴跌，集团迅速发表声明，称报道所涉环节系「个别底层员工的违规操作」，涉事员工已被开除，与集团无关。你盯着屏幕，知道那些人只是替罪羊——断尾求生，这只庞然大物正在蛰伏。</p>`,
       quote: "「真相是有重量的。它压垮了一些人，也压在一些人的名字上，永不风化。」"
     },
     2: {
@@ -4053,6 +4116,7 @@ function onFlag(f) {
     case "gov_decrypted":
       showChapter("第三章：双重人格",
         "官方文件证实：10月15日夜里，3号仓库有一批「货物」要转运——里面可能有北辰的母亲。留给你的时间不多了。而就在这时，北辰发来紧急消息：那个「人」，回来了。");
+      setTimeout(() => toast("盾 辰天集团安全网关拦截", "本会话已被标记。辰天法务部正在溯源你的访问——你看到了不该看到的东西。", "danger", null, 9000), 1200);
       setTimeout(() => {
         setFlag("ch3_started");
         S.flags.chat_unread = true;
@@ -4203,6 +4267,7 @@ function renderBrowser() {
   if (p === "forum_top") setTimeout(() => setFlag("forum_read_top"), 200);
   if (p === "forum_b2") setTimeout(() => setFlag("forum_read_b2"), 200);
   if (p === "forum_zhang") setTimeout(() => setFlag("forum_read_zhang"), 200);
+  if (p === "forum_ct") setTimeout(() => { setFlag("forum_read_ct"); toast("404 实时拦截", "辰天安全网关标记了这次访问。有人在看着你。", "danger"); }, 200);
   const fn = PAGES[p] || PAGES.noresult;
   const urlMap = {
     home: "sos.xd.net/home", results: "sos.xd.net/search?q=" + encodeURIComponent(S.ui.browser.query),
@@ -4525,6 +4590,8 @@ document.addEventListener("click", (e) => {
 但现在我知道了，他们为了救你，把我变成了「魔鬼」。他们在我的评估报告上写了「反社会」、「危险」。那是假的。我只是……不知道该怎么像你一样笑得那么开心。
 
 明天晚上，妈妈会在3号仓库被转移。他们要把所有「不听话的冗余体」集中销毁。如果你还认我这个弟弟，就来救妈妈。我会在仓库等你们。
+
+他们说我脑子里装着「回声计划」的初始密钥。我不知道什么是回声，但我知道——他们想把所有「冗余体」的意识，变成数字奴隶。
 
 对了，我的信用积分卡密码是「双子星」。你可以用这个进入生命延续中心的员工系统，调出我的原始评估报告。你会发现，我本来才是那个应该活下来的人。
 
