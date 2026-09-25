@@ -2806,7 +2806,7 @@ function cloudHome() {
     </div>
     ${prologueDone()
       ? ""
-      : `<div class="hint-box">${svgIcon("search")} 逐一点开文件夹里的3张截图和2个文件。照片可以<b>悬停查看背面</b>，还可以<b>查看文件属性</b>（EXIF）。</div>`}
+      : `<div class="hint-box">${svgIcon("search")} 逐一点开文件夹里的3张截图和2个文件。<b>2048留念.jpg 已损坏</b>，但仍可<b>查看文件属性</b>（EXIF）。</div>`}
   </div>`;
 }
 function prologueDone() { return has("e_chat1") && has("e_chat2") && has("e_chat3") && has("e_photo") && has("e_note"); }
@@ -2881,11 +2881,15 @@ function cloudView(id) {
     setFlag("e_photo");
     return `<div class="file-viewer">
       <button class="btn fv-back" data-action="cloud-home">← 返回</button>
-      <div class="photo-frame" data-action="toggle-photo-back">
-        <div class="pf-img"><img class="pf-photo" src="assets/photo_2048.jpg" alt="2048留念.jpg"></div>
-        <div class="pf-hover-reveal">${svgIcon("note")} 照片背面（钢笔字迹）：<br><b>「2048留念。我们的第一个孩子，<br>和即将到来的第二份希望。」</b></div>
+      <h3 style="margin:10px 0 14px">${svgIcon("photo")} 2048留念.jpg</h3>
+      <div class="photo-frame" style="cursor:default;display:flex;align-items:center;justify-content:center;min-height:220px;background:#0e1826;border:1px dashed #3a4d6b;border-radius:8px">
+        <div style="text-align:center;color:var(--dim);padding:28px 20px">
+          <div style="font-size:40px;line-height:1;margin-bottom:12px">${svgIcon("alert", "#e06c75")}</div>
+          <div style="font-size:14px;color:#e06c75;font-weight:bold;margin-bottom:6px">照片已损坏</div>
+          <div style="font-size:12px;line-height:1.8">图像数据无法读取，无法预览。<br>文件属性（元数据）仍可查看。</div>
+        </div>
       </div>
-      <div class="pf-hint">${svgIcon("mouse")} 悬停照片查看背面 ·
+      <div class="pf-hint">${svgIcon("file")} 文件头损坏，图像无法预览 ·
         <a data-action="cloud-exif" style="color:#7fb8d8;cursor:pointer;text-decoration:underline">查看文件属性（EXIF）</a></div>
       <div id="exif-box"></div>
     </div>`;
