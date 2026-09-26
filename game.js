@@ -3952,7 +3952,7 @@ const NB_COMMENTS_EXTRA = [
 function showNewsburst(titleText) {
   const title = titleText || "《星都观察者》深度 | 代号「双子」：谁替我们的孩子决定了生死？";
   const comments = has("obs_bribe") ? NB_COMMENTS.concat(NB_COMMENTS_EXTRA) : NB_COMMENTS;
-  const chenDecl = has("obs_bribe") ? `<div class="nb-company" style="margin-top:12px;padding:10px 14px;border:1px solid #5a3a3a;border-radius:8px;background:#241515;font-size:13px;line-height:1.8"><b style="color:#ffb4b4">辰天集团 · 紧急声明</b><br>针对今日报道，辰天集团回应：报道所涉评估环节系「个别底层员工的违规操作」，涉事人员已被开除，与集团无关。集团股价盘中波动，公司运营一切正常。</div>` : "";
+  const chenDecl = has("obs_bribe") ? `<div class="nb-company" style="margin-top:12px;padding:10px 14px;border:1px solid #5a3a3a;border-left:4px solid #e06c75;border-radius:8px;background:#241515;font-size:13px;line-height:1.8;color:#ffd7dc"><b style="color:#ffb4b4">辰天集团 · 紧急声明</b><br>针对今日报道，辰天集团回应：报道所涉评估环节系「个别底层员工的违规操作」，涉事人员已被开除，与集团无关。集团股价盘中波动，公司运营一切正常。</div>` : "";
   $("#newsburst-inner").innerHTML = `
     <div class="nb-tv">
       <div class="nb-bar"><span class="nb-live">● 直播插播</span><span style="font-size:13px;color:#ffd7dc">全城紧急新闻</span><span class="nb-chan">星都都市频道 · XDTV-1</span></div>
@@ -4348,6 +4348,8 @@ document.addEventListener("click", (e) => {
     },
     "quick-replay": () => {
       S.difficulty = "easy";
+      S.flags.game_over = false;
+      S.flags.choice_route1 = false;
       $("#intro-screen").classList.add("hidden");
       $("#desktop").classList.remove("hidden");
       S.started = true;
@@ -4388,6 +4390,7 @@ document.addEventListener("click", (e) => {
     "to-intro": () => {
       $("#ending-screen").classList.add("hidden");
       S.flags.game_over = false;
+      S.flags.choice_route1 = false;
       $("#intro-screen").classList.remove("hidden");
       try {
         const done = JSON.parse(localStorage.getItem("wig_endings") || "[]");
@@ -4399,6 +4402,7 @@ document.addEventListener("click", (e) => {
       closeModal();
       $("#ending-screen").classList.add("hidden");
       S.flags.game_over = false;
+      S.flags.choice_route1 = false;
       $("#intro-screen").classList.remove("hidden");
       try {
         const done = JSON.parse(localStorage.getItem("wig_endings") || "[]");
