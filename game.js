@@ -282,7 +282,7 @@ function openApp(appId) {
   S.windows[appId] = { el, minimized: false };
   makeDraggable(el, el.querySelector(".win-titlebar"));
   makeResizable(el, el.querySelector(".win-resize"));
-  el.addEventListener("mousedown", () => focusWin(appId));
+  el.addEventListener("pointerdown", () => focusWin(appId));
   focusWin(appId);
   beep(700, .04, .02);
   setTimeout(() => { if (S.windows[appId]) refreshApp(appId); }, 200 + Math.random() * 220);
@@ -307,35 +307,46 @@ function focusWin(appId) {
   updateTaskbar();
 }
 function makeDraggable(el, handle) {
+  if (!handle) return;
   let sx, sy, ox, oy, dragging = false;
-  handle.addEventListener("mousedown", (e) => {
+  handle.addEventListener("pointerdown", (e) => {
     if (e.target.closest("button")) return;
     dragging = true; sx = e.clientX; sy = e.clientY;
-    ox = el.offsetLeft; oy = el.offsetTop; e.preventDefault();
+    ox = el.offsetLeft; oy = el.offsetTop;
+    try { handle.setPointerCapture(e.pointerId); } catch (err) {}
+    e.preventDefault();
   });
-  window.addEventListener("mousemove", (e) => {
+  handle.addEventListener("pointermove", (e) => {
     if (!dragging) return;
     el.style.left = Math.max(-100, ox + e.clientX - sx) + "px";
     el.style.top = Math.max(0, oy + e.clientY - sy) + "px";
   });
-  window.addEventListener("mouseup", () => dragging = false);
+  handle.addEventListener("pointerup", () => dragging = false);
+  handle.addEventListener("pointercancel", () => dragging = false);
 }
 function makeResizable(el, handle) {
   if (!handle) return;
-  handle.addEventListener("mousedown", (e) => {
+  handle.addEventListener("pointerdown", (e) => {
     e.preventDefault(); e.stopPropagation();
     const sx = e.clientX, sy = e.clientY;
     const ow = el.offsetWidth, oh = el.offsetHeight;
+    try { handle.setPointerCapture(e.pointerId); } catch (err) {}
     const move = (ev) => {
       el.style.width = Math.max(360, ow + ev.clientX - sx) + "px";
       el.style.height = Math.max(260, oh + ev.clientY - sy) + "px";
     };
-    const up = () => { window.removeEventListener("mousemove", move); window.removeEventListener("mouseup", up); };
-    window.addEventListener("mousemove", move);
-    window.addEventListener("mouseup", up);
+    const up = () => {
+      handle.removeEventListener("pointermove", move);
+      handle.removeEventListener("pointerup", up);
+      handle.removeEventListener("pointercancel", up);
+    };
+    handle.addEventListener("pointermove", move);
+    handle.addEventListener("pointerup", up);
+    handle.addEventListener("pointercancel", up);
   });
 }
 function updateTaskbar() {
+  document.body.classList.toggle("has-win", Object.keys(S.windows).length > 0);
   const tb = $("#tb-windows"); tb.innerHTML = "";
   Object.entries(S.windows).forEach(([id, w]) => {
     const a = APPS[id];
@@ -3042,7 +3053,7 @@ function remotePhoto(v) {
         <img class="pf-photo" src="assets/photo_merrygo.jpg" alt="旋转木马.jpg">
         <div class="pf-hover-reveal">${svgIcon("note")} 照片背面：<br><b>「哥哥和弟弟，希望你们永远在一起。——妈妈」</b></div>
       </div></div>
-      <div class="pf-hint">${svgIcon("mouse")} 悬停查看背面 · 10岁，旋转木马。一个笑得开心（A），一个面无表情地看着镜头（B）。</div>
+      <div class="pf-hint">${svgIcon("mouse")} 点击 / 悬停查看背面 · 10岁，旋转木马。一个笑得开心（A），一个面无表情地看着镜头（B）。</div>
   `;
   } else {
     inner = `
@@ -4881,14 +4892,14 @@ document.addEventListener("input", (e) => {
   if (e.target && e.target.id === "mail-filter") mailFilter(e.target.value);
 });
 
-document.addEventListener("mousedown", (e) => {
+["mousedown", "touchstart"].forEach(ev => document.addEventListener(ev, (e) => {
   const sm = $("#start-menu");
   if (sm && !sm.classList.contains("hidden") && !e.target.closest("#start-menu") && !e.target.closest('[data-action="open-start"]')) {
     sm.classList.add("hidden");
   }
-});
+}, { passive: true }));
 
-$("#modal-layer").addEventListener("mousedown", (e) => { if (e.target.id === "modal-layer") closeModal(); });
+["mousedown", "touchstart"].forEach(ev => $("#modal-layer").addEventListener(ev, (e) => { if (e.target.id === "modal-layer") closeModal(); }, { passive: true }));
 
 
 const LOG_POOL = [
@@ -4938,14 +4949,14 @@ setInterval(() => {
 
 
 let lastActive = Date.now();
-["mousedown", "keydown"].forEach(ev => document.addEventListener(ev, () => { lastActive = Date.now(); }, true));
+["mousedown", "keydown", "touchstart"].forEach(ev => document.addEventListener(ev, () => { lastActive = Date.now(); }, true));
 setInterval(() => {
   if (!S.started || S.flags.game_over || S.difficulty !== "easy") return;
   if (Date.now() - lastActive < 50000) return;
   lastActive = Date.now();
   const pool = [];
   if (!has("cloud_opened")) pool.push("试试打开「星云网盘」——密码是8位的生日。");
-  if (has("cloud_opened") && !prologueDone()) pool.push("照片背面要把鼠标悬停上去才看得见；也别忘了点「查看文件属性」。");
+  if (has("cloud_opened") && !prologueDone()) pool.push("照片背面要点一下照片才看得见；也别忘了点「查看文件属性」。");
   if (has("remote_granted") && !has("safe_opened")) pool.push("保险箱的密码提示说的是北辰本人——加密频道里问他最快。");
   if (has("ch1_done") && !has("invite_known")) pool.push("照片EXIF里的坐标，能搜到老城区的一个老地址。");
   if (has("invite_known") && !has("forum_open")) pool.push("老电话的自动应答录音可以反复听——邀请码就念在里面。");
@@ -4983,6 +4994,11 @@ function boot() {
   
   $("#boot-screen").classList.add("hidden");
   $("#intro-screen").classList.remove("hidden");
+  
+  if (window.innerWidth <= 760) {
+    const op = $("#objective-panel");
+    if (op) op.classList.add("collapsed");
+  }
 }
 boot();
 
