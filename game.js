@@ -4618,6 +4618,9 @@ document.addEventListener("click", (e) => {
     "chat-letter-done": () => {
       setFlag("backdoor_available");
       setFlag("b_letter");
+      setTimeout(() => {
+        toast("引 下一步", "回到桌面，打开「居民ID系统」——多出了一个「隐蔽后门（北辰B提供）」标签页。", "warn", () => openApp("id"), 12000);
+      }, 1200);
     },
 
     
