@@ -3783,9 +3783,11 @@ function objectiveList() {
 }
 function objectivesHtml() {
   if (S.difficulty !== "easy") {
-    return `<h3 class="app-title"><span class="at-ic">${svgIcon("target")}</span>任务目标</h3>
+    return `<div class="app-root">
+    <h3 class="app-title">任务目标</h3>
     <div class="app-sub">普通难度</div>
-    <div class="hint-box" style="border-left-color:#8a6a2a;background:rgba(255,180,84,.06);color:#d8b98a">${svgIcon("mute")} 普通难度不提供任务目标与提示。<br>线索要靠你自己拼——卡住时，桌面同目录下的《星都双子》完整攻略.docx 就是你的任务清单。</div>`;
+    <div class="hint-box" style="border-left-color:#8a6a2a;background:rgba(255,180,84,.06);color:#d8b98a">${svgIcon("mute")} 普通难度不提供任务目标与提示。<br>线索要靠你自己拼——卡住时，桌面同目录下的《星都双子》完整攻略.docx 就是你的任务清单。</div>
+  </div>`;
   }
   const list = objectiveList()
     .filter(i => i.done || i.current)
@@ -3793,11 +3795,13 @@ function objectivesHtml() {
     `<li class="${i.done ? "done" : ""} ${i.current ? "current" : ""}">${i.text}</li>`).join("");
   const extra = (has("truth_known") && !has("game_over") && !has("choice_route1"))
     ? `<button class="btn btn-danger" style="width:100%;margin-top:12px" data-action="show-choice">${svgIcon("scale")} 做出最终选择</button>` : "";
-  return `<h3 class="app-title"><span class="at-ic">${svgIcon("target")}</span>任务目标</h3>
+  return `<div class="app-root">
+    <h3 class="app-title">任务目标</h3>
     <div class="app-sub">当前：${esc(objectiveText())}</div>
     <ul class="obj-list">${list}</ul>
     ${extra}
-    <div class="hint-box">${svgIcon("spark")} 卡住时可以：多搜索几个关键词 / 查看邮件附件 / 打开语音助手听录音 / 找北辰聊聊。</div>`;
+    <div class="hint-box">${svgIcon("spark")} 卡住时可以：多搜索几个关键词 / 查看邮件附件 / 打开语音助手听录音 / 找北辰聊聊。</div>
+  </div>`;
 }
 function renderObjectives() {
   const ot = $("#objective-text");
