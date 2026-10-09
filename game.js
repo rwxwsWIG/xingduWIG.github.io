@@ -75,16 +75,33 @@ const beepGunshot = () => { beep(90, .35, .3); beep(60, .5, .25, .05); };
 ["click", "touchstart", "keydown"].forEach(ev =>
   document.addEventListener(ev, unlockAudio, { once: false, passive: true })
 );
-function toast(title, body, kind = "", onClick = null, ms = 8000) {
+function toast(title, body, kind = "", onClick = null, ms = 10000) {
+  const area = $("#toast-area");
   const el = document.createElement("div");
   el.className = "toast " + kind;
   el.innerHTML = `<div class="t-title"><span>${toastGlyph(title)}</span></div><div class="t-body">${body}</div><button class="t-close" aria-label="关闭通知">✕</button>`;
   const dismiss = () => { el.classList.add("out"); setTimeout(() => el.remove(), 320); };
   el.onclick = () => { if (onClick) onClick(); dismiss(); };
   el.querySelector(".t-close").addEventListener("click", (e) => { e.stopPropagation(); dismiss(); });
-  $("#toast-area").appendChild(el);
+
+  // —— 同屏已有其它提示时自动延长留存时间：避免两条同时弹出时来不及看清 ——
+  const others = area.querySelectorAll(".toast:not(.out)").length;
+  let remain = Math.max(ms, 8000) + others * 4000;   // 已有 n 条 → 本条 +4s·n
+  let deadline = 0, timer = null;
+  const arm = () => { deadline = Date.now() + remain; if (timer) clearTimeout(timer); timer = setTimeout(dismiss, remain); };
+  const pause = () => { if (!timer) return; clearTimeout(timer); timer = null; remain = Math.max(2000, deadline - Date.now()); };
+  const resume = () => { if (!timer) arm(); };
+  el._toastExtend = (add) => { remain += add; if (timer) arm(); };
+
+  area.appendChild(el);
+  arm();
   if (S.difficulty !== "easy") ding();
-  setTimeout(dismiss, ms);
+
+  // 鼠标悬停暂停倒计时，移开后继续；先弹出的那条也随新提示一起延长
+  el.addEventListener("mouseenter", pause);
+  el.addEventListener("mouseleave", resume);
+  if (others) area.querySelectorAll(".toast:not(.out)").forEach(t => { if (t !== el && t._toastExtend) t._toastExtend(4000); });
+
   return el;
 }
 
