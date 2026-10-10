@@ -2769,7 +2769,7 @@ function forumHome() {
     </div>
     <div class="an-dm">
       <div class="an-dm-head">站内私信 · D_张 <span class="an-dm-new">新</span></div>
-      <div class="an-dm-body">是那个记者吧。老林提过你。<br><br>那我就少废话，你就记三件事：临港，东郊，化工厂3号仓库。10月15日夜里，有一批「货」要转走。里面可能有我儿子，还有老林的媳妇。<br><br>这批货不只是人——还有辰天点名要「销毁」的实验室废料。辰天法务部的人会亲自押车，他们的手段比警察还黑。<br><br>信不信随你。信的话，就别磨蹭。<br><br>——D_张</div>
+      <div class="an-dm-body">是那个记者吧，小伙子。老林提过你。<br><br>那我就少废话，你就记三件事：临港，东郊，化工厂3号仓库。10月15日夜里，有一批「货」要转走。里面可能有我儿子，还有老林的媳妇。<br><br>这批货不只是人——还有辰天点名要「销毁」的实验室废料。辰天法务部的人会亲自押车，他们的手段比警察还黑。<br><br>信不信随你。信的话，就别磨蹭。<br><br>——D_张</div>
       <div class="an-dm-foot">2066-10-13 21:02 · 端到端加密送达</div>
     </div>
     <div class="web-header" style="border-color:#1f3a2a"><h2>讨论区</h2><span class="wh-url">anyong.onion · 身份已校验 ✓</span></div>
