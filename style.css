@@ -1755,6 +1755,18 @@ button { font-family: var(--font); cursor: pointer; }
   font-family: var(--mono); white-space: pre-wrap; margin-bottom: 14px;
 }
 
+/* 扫描件 / 文档图片查看器（星云网盘 · 离职证明.png） */
+.doc-scan {
+  background: #fff; border: 1px solid var(--line); border-radius: 12px;
+  padding: 12px; max-width: 520px; margin: 0 auto 4px;
+  box-shadow: var(--shadow-sm);
+  line-height: 0;
+}
+.doc-scan img {
+  width: 100%; height: auto; display: block; border-radius: 6px;
+  user-select: none; -webkit-user-drag: none;
+}
+
 .chat-shot {
   background: #f7fafc; border: 1px solid var(--line); border-radius: 14px;
   padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px;

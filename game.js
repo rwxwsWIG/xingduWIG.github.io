@@ -2840,7 +2840,7 @@ function cloudHome() {
   const items = [
     { id: "folder_chats", icon: "夹", name: "爸妈的聊天记录", meta: "3张截图", flag: null },
     { id: "photo2048", icon: "图", name: "2048留念.jpg", meta: "2048-06-01 · 2.4MB", flag: "e_photo" },
-    { id: "leave_proof", icon: "文", name: "离职证明.txt", meta: "2048-04-30 · 2KB", flag: "e_proof" },
+    { id: "leave_proof", icon: "图", name: "离职证明.png", meta: "2048-04-30 · 518KB", flag: "e_proof" },
     { id: "note", icon: "文", name: "不要相信任何人.txt", meta: "1KB", flag: "e_note" },
   ];
   return `<div class="app-root">
@@ -2949,18 +2949,12 @@ function cloudView(id) {
     setFlag("e_proof");
     return `<div class="file-viewer">
       <button class="btn fv-back" data-action="cloud-home">← 返回</button>
-      <h3 style="margin-bottom:14px">离职证明.txt</h3>
-      <div class="txt-file">辰天生物科技有限公司 · 人事部
-
-离职证明
-
-兹证明 林建国（男）自 2038 年至 2048 年受雇于辰天生物科技有限公司（外包岗位），从事后勤档案整理工作，于 2048 年 4 月 30 日因「个人原因」离职。
-
-特此证明。
-
-—— 辰天生物 · 人事部（盖章）
-2048-04-30</div>
-      <div class="hint-box" style="margin-top:12px">${svgIcon("alert")} <b style="color:var(--warn)">⚠ 关键信息已被辰天法务部远程拦截</b><br>离职原因一栏被远程涂黑加密。文件末尾的加密提示写着：<br><span class="mono" style="color:#8fb4d8">「我的父母因为发现了公司的一个秘密被开除了，他们让我绝对不要对任何人说。」</span><br>想解开它，你得先找到那扇「水面之下」的门。</div>
+      <h3 style="margin:10px 0 14px">${svgIcon("photo")} 离职证明.png</h3>
+      <div class="doc-scan">
+        <img src="assets/离职证明.png" alt="辰天生物科技有限公司 · 人事部 · 离职证明（扫描件）" draggable="false">
+      </div>
+      <div class="pf-hint">${svgIcon("file")} 扫描件 · 1408 × 1996 · 2048-04-30</div>
+      <div class="hint-box" style="margin-top:12px">文件末尾的加密提示写着：<br><span class="mono" style="color:#8fb4d8">「我的父母因为发现了公司的一个秘密被开除了，他们让我绝对不要对任何人说。」</span></div>
     </div>`;
   }
   if (id === "note") {
